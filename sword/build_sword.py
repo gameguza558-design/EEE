@@ -4,7 +4,7 @@ Run:  python3 sword/build_sword.py          (needs `pip install bpy==4.2.0`)
 
 Outputs go to sword/export/ (.blend, .fbx, .obj, .glb, sword_texture.png) and sword/renders/ (.png).
 The sword stands along +Z with the origin where the blade meets the guard,
-so the grip hangs below the origin. Units are meters (~0.95 m long overall).
+so the grip hangs below the origin. Units are meters (~1.0 m long overall).
 """
 import math
 import os
@@ -170,7 +170,7 @@ def build_grip(mat):
     bm = bmesh.new()
     sides = 8
     # (z, radius)
-    sections = [(-0.026, 0.015), (-0.075, 0.018), (-0.124, 0.015)]
+    sections = [(-0.026, 0.015), (-0.103, 0.018), (-0.180, 0.015)]
     rings = []
     for z, r in sections:
         ring = []
@@ -204,7 +204,7 @@ def build_pommel(mat):
     bpy.data.meshes.remove(tmp)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     obj = mesh_object("Pommel", bm, mat)
-    obj.location.z = -0.150
+    obj.location.z = -0.205
     return obj
 
 
@@ -307,14 +307,14 @@ def main():
     scene, cam = setup_render()
     # Full view: sword leaned diagonally across a portrait frame.
     root.rotation_euler = (0, math.radians(-35), 0)
-    aim(cam, (-0.17, -2.0, 0.25), (-0.17, 0, 0.25))
-    cam.data.ortho_scale = 0.95
+    aim(cam, (-0.15, -2.0, 0.23), (-0.15, 0, 0.23))
+    cam.data.ortho_scale = 1.0
     render(scene, os.path.join(RENDER_DIR, "sword_full.png"), (1280, 1280))
 
     # Hilt close-up, three-quarter view.
     root.rotation_euler = (0, 0, 0)
-    aim(cam, (0.55, -0.75, 0.15), (0, 0, -0.06))
-    cam.data.ortho_scale = 0.38
+    aim(cam, (0.55, -0.75, 0.12), (0, 0, -0.09))
+    cam.data.ortho_scale = 0.44
     render(scene, os.path.join(RENDER_DIR, "sword_hilt.png"), (1080, 1080))
 
 

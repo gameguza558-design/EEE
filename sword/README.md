@@ -9,7 +9,7 @@
 | `Grip` ด้ามจับ 8 เหลี่ยม | Leather |
 | `Pommel` ปุ่มท้ายด้ามทรงล้อ | DarkIron |
 
-ความยาวรวมประมาณ 0.95 เมตร
+ความยาวรวมประมาณ 1 เมตร (ด้ามจับยาวประมาณ 15 ซม.)
 
 ![full](renders/sword_full.png)
 ![hilt](renders/sword_hilt.png)
