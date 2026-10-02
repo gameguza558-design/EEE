@@ -2,7 +2,7 @@
 
 Run:  python3 sword/build_sword.py          (needs `pip install bpy==4.2.0`)
 
-Outputs go to sword/export/ (.blend, .fbx, .obj, .glb) and sword/renders/ (.png).
+Outputs go to sword/export/ (.blend, .fbx, .obj, .glb, sword_texture.png) and sword/renders/ (.png).
 The sword stands along +Z with the origin where the blade meets the guard,
 so the grip hangs below the origin. Units are meters (~0.95 m long overall).
 """
@@ -22,14 +22,46 @@ def reset_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
-def make_material(name, color, metallic, roughness):
+# Texture atlas: each part's UV islands are packed into its own quadrant of one
+# small image, so engines that only read textures (e.g. Roblox) get the colors.
+# name -> (u0, v0, u1, v1) quadrant, RGB color
+ATLAS_SIZE = 256
+ATLAS = {
+    "Blade": ((0.0, 0.5, 0.5, 1.0), (0.78, 0.80, 0.83)),
+    "Guard": ((0.5, 0.5, 1.0, 1.0), (0.22, 0.22, 0.24)),
+    "Grip": ((0.0, 0.0, 0.5, 0.5), (0.16, 0.07, 0.03)),
+    "Pommel": ((0.5, 0.0, 1.0, 0.5), (0.22, 0.22, 0.24)),
+}
+
+
+def make_atlas_image(path):
+    """Paint each quadrant its flat color (sRGB) and save the PNG."""
+    img = bpy.data.images.new("SwordAtlas", ATLAS_SIZE, ATLAS_SIZE, alpha=False)
+    px = [0.0] * (ATLAS_SIZE * ATLAS_SIZE * 4)
+    for (u0, v0, u1, v1), color in ATLAS.values():
+        srgb = [c ** (1 / 2.2) for c in color]  # linear -> display color
+        for y in range(int(v0 * ATLAS_SIZE), int(v1 * ATLAS_SIZE)):
+            for x in range(int(u0 * ATLAS_SIZE), int(u1 * ATLAS_SIZE)):
+                i = (y * ATLAS_SIZE + x) * 4
+                px[i:i + 4] = (*srgb, 1.0)
+    img.pixels.foreach_set(px)
+    img.filepath_raw = path
+    img.file_format = "PNG"
+    img.save()
+    return img
+
+
+def make_material(name, image, metallic, roughness):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
-    bsdf = mat.node_tree.nodes["Principled BSDF"]
-    bsdf.inputs["Base Color"].default_value = (*color, 1.0)
+    nodes = mat.node_tree.nodes
+    bsdf = nodes["Principled BSDF"]
+    tex = nodes.new("ShaderNodeTexImage")
+    tex.image = image
+    tex.interpolation = "Closest"
+    mat.node_tree.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
     bsdf.inputs["Metallic"].default_value = metallic
     bsdf.inputs["Roughness"].default_value = roughness
-    mat.diffuse_color = (*color, 1.0)  # viewport / some importers
     return mat
 
 
@@ -43,7 +75,27 @@ def mesh_object(name, bm, material):
     mesh.materials.append(material)
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(obj)
+    unwrap_into_atlas(obj)
     return obj
+
+
+def unwrap_into_atlas(obj):
+    """Smart-project UVs, then fit them inside this part's atlas quadrant."""
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.02)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    obj.select_set(False)
+
+    (u0, v0, u1, v1), _ = ATLAS[obj.name]
+    margin = 0.02
+    uvs = obj.data.uv_layers.active.data
+    for loop in uvs:
+        u, v = loop.uv
+        loop.uv = (u0 + margin + u * (u1 - u0 - 2 * margin),
+                   v0 + margin + v * (v1 - v0 - 2 * margin))
 
 
 def loft(bm, rings, cap_start=True, cap_end=True):
@@ -157,9 +209,10 @@ def build_pommel(mat):
 
 
 def build_sword():
-    steel = make_material("Steel", (0.78, 0.80, 0.83), 1.0, 0.30)
-    iron = make_material("DarkIron", (0.22, 0.22, 0.24), 1.0, 0.45)
-    leather = make_material("Leather", (0.16, 0.07, 0.03), 0.0, 0.65)
+    atlas = make_atlas_image(os.path.join(EXPORT_DIR, "sword_texture.png"))
+    steel = make_material("Steel", atlas, 1.0, 0.30)
+    iron = make_material("DarkIron", atlas, 1.0, 0.45)
+    leather = make_material("Leather", atlas, 0.0, 0.65)
 
     parts = [
         build_blade(steel),
@@ -226,22 +279,27 @@ def render(scene, path, res):
 
 def main():
     reset_scene()
-    root, parts = build_sword()
     os.makedirs(EXPORT_DIR, exist_ok=True)
     os.makedirs(RENDER_DIR, exist_ok=True)
+    root, parts = build_sword()
 
     tris = sum(len(p.data.polygons) for p in parts)
     print(f"faces: {tris}")
 
     # Exports (before cameras/lights are added, so files hold only the sword).
+    bpy.context.preferences.filepaths.save_version = 0  # no .blend1 backups
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(EXPORT_DIR, "medieval_sword.blend"))
     bpy.ops.export_scene.fbx(
         filepath=os.path.join(EXPORT_DIR, "medieval_sword.fbx"),
         object_types={"MESH", "EMPTY"},
         apply_scale_options="FBX_SCALE_UNITS",
         mesh_smooth_type="FACE",
+        path_mode="COPY",
+        embed_textures=True,  # Roblox picks the texture up straight from the FBX
     )
-    bpy.ops.wm.obj_export(filepath=os.path.join(EXPORT_DIR, "medieval_sword.obj"))
+    bpy.ops.wm.obj_export(
+        filepath=os.path.join(EXPORT_DIR, "medieval_sword.obj"), path_mode="RELATIVE",
+    )
     bpy.ops.export_scene.gltf(
         filepath=os.path.join(EXPORT_DIR, "medieval_sword.glb"), export_format="GLB",
     )
