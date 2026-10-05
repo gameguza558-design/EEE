@@ -77,6 +77,68 @@ def pitchfork():
     return w
 
 
+def hoe():
+    """จอบ: long wooden haft with a broad iron blade set at a right angle."""
+    w = Weapon("Hoe", damage=11, cooldown=0.9, two_handed=True)
+    haft(w, -1.0, 2.5, 0.07, rings=(2.35,))
+    h = w("Head")
+    h.box((0.18, 0.22, 0.22), "iron", pos=(0, 0, 2.48))  # eye around the haft
+    # Blade hangs forward and down from the top of the haft.
+    h.box((0.62, 0.55, 0.05), "iron", pos=(0, -0.38, 2.36), rot=(-70, 0, 0), top=(1.15, 1))
+    h.box((0.66, 0.06, 0.07), "blade", pos=(0, -0.58, 2.1), rot=(-70, 0, 0))
+    return w
+
+
+def spade():
+    """เสียม: narrow digging spade with a T grip."""
+    w = Weapon("Spade", damage=10, cooldown=0.85)
+    haft(w, -0.6, 1.9, 0.065)
+    w("Handle").box((0.42, 0.1, 0.1), "wood", pos=(0, 0, -0.62))
+    h = w("Head")
+    h.box((0.16, 0.16, 0.3), "iron", pos=(0, 0, 1.95))  # socket
+    h.loft([(2.05, [(0.2, 0.03), (-0.2, 0.03), (-0.2, -0.03), (0.2, -0.03)]),
+            (2.6, [(0.17, 0.025), (-0.17, 0.025), (-0.17, -0.025), (0.17, -0.025)])], "iron", tip=(0, 0, 2.85))
+    h.box((0.38, 0.05, 0.06), "blade", pos=(0, 0, 2.6))
+    return w
+
+
+def sickle():
+    """เคียว: short handle with a curved hook blade."""
+    w = Weapon("Sickle", damage=13, cooldown=0.6)
+    band(w("Handle"), -0.35, 0.3, 0.07, 0.07, 0.025, "wood")
+    tube(w("Handle"), 0.3, 0.38, 0.09, 0.09, "iron", sides=6)
+    b = w("Blade")
+    # Crescent: segments sweeping up and then curling forward.
+    pts = [(0.0, 0.38)]
+    for k in range(1, 9):
+        a = math.radians(-10 + 165 * k / 8)
+        pts.append((-0.42 + 0.42 * math.cos(a) * -1 + 0.0, 0.38 + 0.55 * math.sin(a) + 0.12))
+    for (y0, z0), (y1, z1) in zip(pts, pts[1:]):
+        mid = ((y0 + y1) / 2, (z0 + z1) / 2)
+        ang = math.degrees(math.atan2(z1 - z0, y1 - y0))
+        length = math.hypot(z1 - z0, y1 - y0) + 0.03
+        t = 1 - pts.index((y1, z1)) / len(pts)
+        b.box((0.03, length, 0.1 * t + 0.03), "blade", pos=(0, mid[0], mid[1]), rot=(ang, 0, 0))
+    return w
+
+
+def scythe():
+    """Big field scythe: long curved haft with a long curved blade."""
+    w = Weapon("Scythe", damage=20, cooldown=1.2, two_handed=True)
+    haft(w, -1.4, 3.2, 0.07, rings=(0.6,), ring_color="leather_strap")
+    w("Handle").box((0.08, 0.35, 0.08), "wood", pos=(0, -0.2, 0.9))  # side grip
+    b = w("Blade")
+    prev = (0.0, 3.15)
+    for k in range(1, 10):
+        t = k / 9
+        y, z = -1.9 * t, 3.15 + 0.35 * math.sin(t * math.pi * 0.9) - 0.2 * t
+        ang = math.degrees(math.atan2(z - prev[1], y - prev[0]))
+        b.box((0.03, math.hypot(y - prev[0], z - prev[1]) + 0.04, 0.2 * (1 - t) + 0.04), "blade",
+              pos=(0, (y + prev[0]) / 2, (z + prev[1]) / 2 - 0.08), rot=(ang, 0, 0))
+        prev = (y, z)
+    return w
+
+
 def hunter_bow():
     # Limbs in the YZ plane, string on the +Y side; the grip is turned so the bow stands up.
     w = Weapon("HunterBow", damage=12, cooldown=1.2, grip=(90, 0, 0))
@@ -203,6 +265,6 @@ def onehorn_greatsword():
 
 
 def all_weapons():
-    return ([pitchfork(), hunter_bow(), woodcutter_axe(), wolf_rider_spear(), onehorn_greatsword()]
+    return ([pitchfork(), hoe(), spade(), sickle(), scythe(), hunter_bow(), woodcutter_axe(), wolf_rider_spear(), onehorn_greatsword()]
             + [tier_axe(t) for t in ("Apprentice", "Mid", "High")]
             + [tier_sword(t) for t in ("Apprentice", "Mid", "High")])

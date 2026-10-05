@@ -34,8 +34,9 @@ RENDERS = os.path.join(HERE, "renders")
 def load_reference():
     """Import the Studio-exported rig, face it toward -Y with feet on z = 0, and name
     every part by its R15 name. Returns {part: object} with origins at part centers."""
+    before = set(bpy.data.objects)
     bpy.ops.wm.obj_import(filepath=REFERENCE, use_split_groups=True)
-    objs = [o for o in bpy.data.objects if o.type == "MESH"]
+    objs = [o for o in bpy.data.objects if o.type == "MESH" and o not in before]
     # The OBJ's front faces +Y after import; turn it around so front is -Y.
     allv = [o.matrix_world @ v.co for o in objs for v in o.data.vertices]
     lo = Vector([min(getattr(v, a) for v in allv) for a in "xyz"])

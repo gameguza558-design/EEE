@@ -135,6 +135,9 @@ function Kit.dress(character, outfitName, options)
 		part.CFrame = bodyPart.CFrame * flip() * CFrame.new(piece.offset * scale)
 		if string.match(kind, "Glow$") then
 			glowify(part, info.glow, partName == "Head" or partName == "UpperTorso")
+		elseif kind == "Body" then
+			-- The painted R15 body replaces the original part's look.
+			bodyPart.Transparency = 1
 		end
 		weld(bodyPart, part)
 		part.Parent = holder
@@ -386,6 +389,9 @@ function Kit.dress(character, outfitName, options)
 		part.CFrame = bodyPart.CFrame * flip() * CFrame.new(piece.offset * scale)
 		if string.match(kind, "Glow$") then
 			glowify(part, info.glow, partName == "Head" or partName == "UpperTorso")
+		elseif kind == "Body" then
+			-- The painted R15 body replaces the original part's look.
+			bodyPart.Transparency = 1
 		end
 		weld(bodyPart, part)
 		part.Parent = holder

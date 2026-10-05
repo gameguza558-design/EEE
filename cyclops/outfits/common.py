@@ -8,6 +8,20 @@ import random
 
 from kit import Piece, band, blob, circle, corruption_crystals, tube
 
+# When True, body clothing (shirts, pants, shoes, bare skin, faces...) is painted on the
+# real R15 body texture instead of built as geometry; only armor/accessories are built.
+PAINTED = False
+
+
+def _painted_skip(fn):
+    def wrapper(*args, **kwargs):
+        if PAINTED:
+            return None
+        return fn(*args, **kwargs)
+    wrapper.__name__, wrapper.__doc__ = fn.__name__, fn.__doc__
+    return wrapper
+
+
 PARTS = ["Head", "UpperTorso", "LowerTorso",
          "LeftUpperArm", "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand",
          "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot"]
@@ -38,6 +52,7 @@ class Outfit:
 
 # ---------------------------------------------------------------------------
 # Heads
+@_painted_skip
 def cyclops_head(o, skin="skin", eye_w=0.3, brow=True, ears=True, mouth=True):
     """Bare cyclops head that covers the 1.2 stud block head, with one big eye."""
     a = o("Head")
@@ -59,6 +74,7 @@ def cyclops_head(o, skin="skin", eye_w=0.3, brow=True, ears=True, mouth=True):
     return a
 
 
+@_painted_skip
 def hair_tuft(o, count=6, length=(0.2, 0.4)):
     rnd = o.rnd
     for _ in range(count):
@@ -67,6 +83,7 @@ def hair_tuft(o, count=6, length=(0.2, 0.4)):
                         0.06, "hair", sides=4)
 
 
+@_painted_skip
 def beard(o, color="fur_dark", length=0.55):
     a = o("Head")
     a.box((1.0, 0.24, length), color, pos=(0, -0.6, -0.42 - length / 2 + 0.2), bottom=(0.45, 0.8))
@@ -76,6 +93,7 @@ def beard(o, color="fur_dark", length=0.55):
 
 # ---------------------------------------------------------------------------
 # Bodies and clothing
+@_painted_skip
 def skin_limbs(o, skin="skin", arms=True, legs=False, muscle=1.0, upper=True):
     """Bare arms (and optionally legs) with simple muscle bulges. upper=False leaves the
     upper arms to sleeves."""
@@ -97,6 +115,7 @@ def skin_limbs(o, skin="skin", arms=True, legs=False, muscle=1.0, upper=True):
             band(o(pre + "LowerLeg"), -0.6, 0.6, 0.56, 0.56, 0.1, skin, grow=0.02)
 
 
+@_painted_skip
 def shirt(o, color, sleeves="upper", collar="black"):
     """Simple shirt/tunic on the torso; sleeves: None, "upper" or "full"."""
     t = o("UpperTorso")
@@ -109,6 +128,7 @@ def shirt(o, color, sleeves="upper", collar="black"):
             band(o(pre + "LowerArm"), -0.3, 0.53, 0.55, 0.55, 0.16, color)
 
 
+@_painted_skip
 def tunic_skirt(o, color, length=0.9, ragged=True):
     """Skirt of a tunic, hanging from the waist."""
     lt = o("LowerTorso")
@@ -119,6 +139,7 @@ def tunic_skirt(o, color, length=0.9, ragged=True):
         lt.cloth(xs, -0.2 - length + 0.05, bottoms, -0.66, color)
 
 
+@_painted_skip
 def belt(o, color="leather_strap", buckle="buckle", z=0.0, w=1.13, d=0.65, h=0.3):
     lt = o("LowerTorso")
     band(lt, z - h / 2, z + h / 2, w, d, 0.2, color)
@@ -133,6 +154,7 @@ def pouch(o, x, y=-0.55, z=-0.25, color="leather"):
     lt.box((0.35, 0.27, 0.12), "leather_strap", pos=(x, y, z + 0.17))
 
 
+@_painted_skip
 def pants(o, color="cloth_brown", baggy=1.0, to_ankle=True):
     for pre in ("Left", "Right"):
         band(o(pre + "UpperLeg"), -0.62, 0.62, 0.56 * baggy, 0.56 * baggy, 0.16, color, grow=0.02)
@@ -141,11 +163,13 @@ def pants(o, color="cloth_brown", baggy=1.0, to_ankle=True):
     band(o("LowerTorso"), -0.22, 0.22, 1.08, 0.6, 0.2, color)
 
 
+@_painted_skip
 def wraps(o, part, zs, color="linen", w=0.6):
     for z in zs:
         band(o(part), z - 0.05, z + 0.05, w, w, 0.16, color)
 
 
+@_painted_skip
 def shoes(o, color="leather", tall=0.0, cuff=None, toe="leather_strap"):
     for pre in ("Left", "Right"):
         f = o(pre + "Foot")
@@ -159,6 +183,7 @@ def shoes(o, color="leather", tall=0.0, cuff=None, toe="leather_strap"):
                 band(ll, -0.62 + tall, -0.48 + tall, 0.64, 0.64, 0.2, cuff)
 
 
+@_painted_skip
 def gloves(o, color="leather", cuff=True):
     for pre in ("Left", "Right"):
         h = o(pre + "Hand")
@@ -167,6 +192,7 @@ def gloves(o, color="leather", cuff=True):
             band(h, 0.06, 0.3, 0.6, 0.6, 0.16, color, grow=0.05)
 
 
+@_painted_skip
 def bracers(o, color="leather", sides=("Left", "Right")):
     for pre in sides:
         band(o(pre + "LowerArm"), -0.5, 0.15, 0.6, 0.6, 0.16, color, grow=0.03)
