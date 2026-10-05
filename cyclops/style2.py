@@ -233,18 +233,30 @@ class Painter:
 # ---------------------------------------------------------------------------
 # Shared painted pieces.
 def cyclops_face(p, skin, iris=(230, 170, 60), corruption=0.0):
-    """Roblox-style painted face: one big eye, heavy brow, small nose and mouth."""
+    """Fierce painted cyclops face: no mouth, one narrowed eye under a heavy V brow,
+    a shadowed socket and a slit pupil."""
     P = "Head"
-    p.ellipse(P, "front", 0.5, 0.42, 0.22, 0.16, (245, 240, 232), outline=(40, 30, 30), width=6)
-    p.ellipse(P, "front", 0.5, 0.43, 0.105, 0.105, iris, outline=(60, 30, 20), width=4)
-    p.ellipse(P, "front", 0.5, 0.43, 0.035, 0.08, (15, 10, 15))
-    p.ellipse(P, "front", 0.46, 0.39, 0.025, 0.025, (255, 255, 255))
+    dark = tuple(int(c * 0.5) for c in skin)
+    socket = tuple(int(c * 0.72) for c in skin)
+    # Shadowed socket around the eye.
+    p.ellipse(P, "front", 0.5, 0.530, 0.3, 0.2, socket)
+    # Eye: almond white, glowing iris, slit pupil, glint.
+    p.ellipse(P, "front", 0.5, 0.540, 0.24, 0.13, (240, 232, 220), outline=(25, 18, 20), width=7)
+    p.ellipse(P, "front", 0.5, 0.550, 0.11, 0.11, iris, outline=(70, 30, 15), width=4)
+    p.ellipse(P, "front", 0.5, 0.550, 0.06, 0.06, tuple(min(255, int(c * 1.25)) for c in iris))
+    p.ellipse(P, "front", 0.5, 0.550, 0.022, 0.085, (12, 6, 12))
+    p.ellipse(P, "front", 0.455, 0.510, 0.02, 0.02, (255, 255, 255))
     if corruption:
-        p.ellipse(P, "front", 0.5, 0.43, 0.13, 0.13, None, outline=(190, 80, 255), width=3)
-    dark = tuple(int(c * 0.55) for c in skin)
-    p.poly(P, "front", [(0.22, 0.22), (0.5, 0.26), (0.78, 0.22), (0.76, 0.27), (0.5, 0.31), (0.24, 0.27)], dark)
-    p.poly(P, "front", [(0.47, 0.6), (0.53, 0.6), (0.55, 0.66), (0.45, 0.66)], tuple(int(c * 0.8) for c in skin))
-    p.line(P, "front", [(0.38, 0.77), (0.5, 0.79), (0.62, 0.76)], dark, width=6)
+        p.ellipse(P, "front", 0.5, 0.550, 0.135, 0.135, None, outline=(190, 80, 255), width=4)
+    # Upper lid slanting down to the middle: it cuts the top of the eye for an angry glare.
+    p.poly(P, "front", [(0.2, 0.380), (0.5, 0.500), (0.8, 0.380), (0.8, 0.440), (0.5, 0.550), (0.2, 0.440)], socket)
+    p.line(P, "front", [(0.24, 0.435), (0.5, 0.545), (0.76, 0.435)], (25, 18, 20), width=7)
+    # Heavy V brow.
+    p.poly(P, "front", [(0.12, 0.280), (0.5, 0.440), (0.88, 0.280), (0.88, 0.360), (0.5, 0.500), (0.12, 0.360)], dark)
+    # Lower lid crease and frown lines; no mouth.
+    p.line(P, "front", [(0.32, 0.680), (0.5, 0.710), (0.68, 0.680)], socket, width=5)
+    p.line(P, "front", [(0.47, 0.500), (0.45, 0.410)], dark, width=4)
+    p.line(P, "front", [(0.53, 0.500), (0.55, 0.410)], dark, width=4)
 
 
 def skin_part(p, part, skin, faces=FACES):
