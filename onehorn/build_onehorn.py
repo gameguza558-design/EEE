@@ -13,11 +13,12 @@ with the same name, using the size/offset table this script generates.
 
 Blender units = studs. Character faces -Y, its left side is +X.
 Outputs: export/onehorn_armor.fbx, export/onehorn_greatsword.fbx, .blend,
-export/onehorn_palette.png, renders/*.png, roblox/OneHornArmor.server.lua
+export/onehorn_texture.png, renders/*.png, roblox/OneHornArmor.server.lua
 """
 import math
 import os
 import random
+import sys
 
 import bpy  # must come first: it makes bmesh/mathutils importable
 import bmesh
@@ -76,49 +77,26 @@ R15_POS = {
 }
 
 # ---------------------------------------------------------------------------
-# Palette texture: 8x8 grid of flat colors. Every face's UVs sit inside the
-# cell of its color, so one small image colors the whole model.
-PALETTE = {  # sRGB 0-255
-    "steel_dark": (40, 38, 45),
-    "steel": (66, 64, 74),
-    "steel_light": (104, 102, 114),
-    "black": (20, 19, 23),
-    "leather": (82, 52, 34),
-    "leather_dark": (52, 33, 22),
-    "buckle": (112, 104, 92),
-    "cloth": (96, 30, 42),
-    "cloth_dark": (62, 20, 30),
-    "glow": (176, 70, 255),
-    "glow_dark": (110, 40, 170),
-    "blade": (168, 166, 176),
-}
-PALETTE_KEYS = list(PALETTE)
-GRID = 8
-CELL_PX = 8
+# Texture: a painted 4x4 atlas of materials (see texture_gen.py). Every face is
+# projected onto the whole tile of its material, so each face reads as a plate
+# with beveled edges, rivets, scratches and grime.
+sys.path.insert(0, HERE)
+from texture_gen import TILES, build_atlas, tile_rect  # noqa: E402
 
 
-def palette_uv(key):
-    i = PALETTE_KEYS.index(key)
-    cx, cy = i % GRID, i // GRID
-    return ((cx + 0.5) / GRID, 1 - (cy + 0.5) / GRID)
-
-
-def make_palette_image(path):
-    size = GRID * CELL_PX
-    img = bpy.data.images.new("OneHornPalette", size, size, alpha=False)
-    px = [0.0] * (size * size * 4)
-    for i, key in enumerate(PALETTE_KEYS):
-        cx, cy = i % GRID, i // GRID
-        r, g, b = (c / 255 for c in PALETTE[key])
-        for y in range(size - (cy + 1) * CELL_PX, size - cy * CELL_PX):
-            for x in range(cx * CELL_PX, (cx + 1) * CELL_PX):
-                j = (y * size + x) * 4
-                px[j:j + 4] = (r, g, b, 1.0)
-    img.pixels.foreach_set(px)
-    img.filepath_raw = path
-    img.file_format = "PNG"
-    img.save()
-    return img
+def face_uvs(face, tile):
+    """Planar-project a face (tile 'up' = world up where possible) onto its tile."""
+    n = face.normal
+    t = Vector((1, 0, 0)) if abs(n.z) > 0.9 else Vector((0, 0, 1)).cross(n).normalized()
+    b = n.cross(t)
+    us = [l.vert.co.dot(t) for l in face.loops]
+    vs = [l.vert.co.dot(b) for l in face.loops]
+    u0, v0, size = tile_rect(tile)
+    m = 3 / 1024  # keep clear of neighbouring tiles
+    def norm(x, lo, hi):
+        return (x - lo) / (hi - lo) if hi - lo > 1e-6 else 0.5
+    return [(u0 + m + norm(u, min(us), max(us)) * (size - 2 * m),
+             v0 + m + norm(v, min(vs), max(vs)) * (size - 2 * m)) for u, v in zip(us, vs)]
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +110,7 @@ class Piece:
         vs = [self.bm.verts.new(v) for v in verts]
         for f in faces:
             face = self.bm.faces.new([vs[i] for i in f])
-            face[self.col] = PALETTE_KEYS.index(color)
+            face[self.col] = TILES.index(color)
 
     def loft(self, rings, color, pos=(0, 0, 0), rot=(0, 0, 0), tip=None, base=None):
         """rings: list of (z, profile) where profile is a list of (x, y) points.
@@ -232,13 +210,11 @@ class Piece:
     def to_object(self, name, material, location):
         bm = self.bm
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        bm.normal_update()
         uv = bm.loops.layers.uv.new("UVMap")
         for f in bm.faces:
-            u, v = palette_uv(PALETTE_KEYS[f[self.col]])
-            k = 0.25 / GRID  # keep each face well inside its cell
-            corners = [(u - k, v - k), (u + k, v - k), (u + k, v + k), (u - k, v + k)]
-            for i, loop in enumerate(f.loops):
-                loop[uv].uv = corners[i % 4]
+            for loop, coords in zip(f.loops, face_uvs(f, TILES[f[self.col]])):
+                loop[uv].uv = coords
         mesh = bpy.data.meshes.new(name)
         bm.to_mesh(mesh)
         bm.free()
@@ -262,142 +238,231 @@ def chamfer_rect(w, d, c):
 
 # ---------------------------------------------------------------------------
 # Armor, one function per body region. `side` is +1 for Left (+X), -1 for Right.
+# The concept's corruption grows on the character's left side, so left pieces use
+# the cracked "plate_corrupt" texture and carry the crystals.
+def band(p, z0, z1, w, d, c, color, grow=0.0, dx=0.0, dy=0.0, rot=(0, 0, 0)):
+    """A ring of armor between z0 and z1, flaring by `grow` toward the top."""
+    p.shell([(z0, w, d, c, dx, dy), (z1, w + grow, d + grow, c, dx, dy)], color, rot=rot)
+
+
+def crystals(g, rnd, count, base_fn, dir_fn, length, radius):
+    for _ in range(count):
+        g.spike(base_fn(), dir_fn(), rnd.uniform(*length), rnd.uniform(*radius), "glow",
+                sides=5, twist=rnd.uniform(0, 3))
+
+
 def head():
     a, g = Piece(), Piece()
-    # Helmet bowl: faceted, slightly taller than the 1.2 block head.
-    a.shell([(-0.66, 0.72, 0.72, 0.2), (0.1, 0.76, 0.76, 0.22), (0.5, 0.66, 0.68, 0.24),
-             (0.74, 0.36, 0.4, 0.14)], "steel_dark", tip=(0, 0.02, 0.84))
-    # Visor plate with a pointed chin.
-    a.box((1.2, 0.14, 0.62), "steel", pos=(0, -0.74, -0.16), top=(1, 1), bottom=(0.75, 1))
-    a.box((0.6, 0.14, 0.26), "steel", pos=(0, -0.72, -0.58), bottom=(0.15, 0.6))
-    a.box((1.08, 0.12, 0.36), "steel", pos=(0, -0.72, 0.3), top=(0.8, 1))
-    # Eye slit.
-    a.box((1.0, 0.06, 0.12), "black", pos=(0, -0.8, 0.07))
-    # Crest ridge front-to-back.
-    a.box((0.14, 1.36, 0.22), "steel_light", pos=(0, 0, 0.62), top=(0.5, 0.9))
-    # Cheek guards.
+    # Helmet bowl, brow band and crest.
+    a.shell([(-0.5, 0.72, 0.72, 0.22), (0.15, 0.76, 0.76, 0.24), (0.52, 0.66, 0.68, 0.26),
+             (0.74, 0.4, 0.42, 0.16)], "plate_dark", tip=(0, 0.02, 0.86))
+    band(a, 0.1, 0.3, 0.79, 0.79, 0.25, "plate_trim")
+    a.box((0.14, 1.42, 0.24), "plate_trim", pos=(0, 0, 0.66), top=(0.5, 0.9))
+    # Face: visor, brow over the eye, nose ridge, breaths and pointed chin.
+    a.box((1.22, 0.14, 0.52), "plate_mid", pos=(0, -0.76, -0.14), bottom=(0.78, 1))
+    a.box((1.14, 0.18, 0.2), "plate_trim", pos=(0, -0.8, 0.22), rot=(-12, 0, 0), top=(0.92, 1))
+    a.box((1.0, 0.06, 0.11), "black", pos=(0, -0.84, 0.07))
+    a.box((0.13, 0.12, 0.58), "plate_trim", pos=(0, -0.85, -0.22), bottom=(0.45, 1))
+    for x in (-0.36, -0.24, 0.24, 0.36):
+        a.box((0.05, 0.05, 0.2), "black", pos=(x, -0.84, -0.2))
+    a.box((0.62, 0.16, 0.3), "plate_mid", pos=(0, -0.74, -0.58), bottom=(0.15, 0.6))
+    # Cheek guards and layered neck guard.
     for s in (1, -1):
-        a.box((0.12, 0.7, 0.8), "steel", pos=(s * 0.76, -0.12, -0.2), bottom=(1, 0.6))
-    # Cyclops eye and the horn.
-    g.box((0.2, 0.05, 0.2), "glow", pos=(0, -0.84, 0.07), rot=(0, 45, 0))
-    g.spike((0, -0.12, 0.62), (0, 0.18, 1), 1.25, 0.15, "glow", sides=6)
+        a.box((0.13, 0.78, 0.86), "plate_mid", pos=(s * 0.8, -0.1, -0.18), bottom=(1, 0.6))
+        a.box((0.1, 0.3, 0.3), "plate_trim", pos=(s * 0.86, -0.15, 0.05), rot=(0, 0, 45))
+    for i in range(3):
+        a.box((1.36 - 0.1 * i, 0.14, 0.22), "plate_mid" if i % 2 else "plate_dark",
+              pos=(0, 0.74 + 0.05 * i, -0.36 - 0.17 * i), rot=(22, 0, 0))
+    # The horn: dark metal fading to purple, set in a trim collar.
+    band(a, 0.66, 0.78, 0.22, 0.22, 0.07, "plate_trim", dy=-0.12)
+    a.spike((0, -0.12, 0.72), (0, 0.18, 1), 1.4, 0.17, "horn", sides=6)
+    # Cyclops eye and corruption creeping over the left side of the helmet.
+    g.box((0.22, 0.05, 0.22), "glow", pos=(0, -0.875, 0.07), rot=(0, 45, 0))
+    g.box((0.5, 0.03, 0.035), "glow", pos=(0, -0.873, 0.07))
+    rnd = random.Random(1)
+    crystals(g, rnd, 5, lambda: (rnd.uniform(0.6, 0.78), rnd.uniform(-0.3, 0.4), rnd.uniform(0.15, 0.6)),
+             lambda: (1, rnd.uniform(-0.4, 0.4), rnd.uniform(0.3, 1.0)), (0.2, 0.45), (0.05, 0.09))
+    for _ in range(3):
+        g.spike((rnd.uniform(-0.12, 0.12), -0.12, 0.74), (rnd.uniform(-0.5, 0.5), rnd.uniform(-0.4, 0.4), 1),
+                rnd.uniform(0.15, 0.3), 0.05, "glow", sides=5)
     return a, g
 
 
 def upper_torso():
     a, g = Piece(), Piece()
-    a.shell([(-0.82, 1.08, 0.6, 0.2), (0.15, 1.14, 0.66, 0.22), (0.84, 1.0, 0.58, 0.22)],
-            "steel_dark")
-    # Center ridge and pectoral plates.
-    a.box((0.16, 0.1, 1.4), "steel_light", pos=(0, -0.68, 0.05), top=(1, 0.6))
+    # Upper breastplate and three abdomen lames, each flaring over the one below.
+    a.shell([(-0.02, 1.1, 0.64, 0.22), (0.45, 1.15, 0.69, 0.24), (0.84, 1.0, 0.6, 0.24)],
+            "plate_dark")
+    for i in range(3):
+        z1 = -0.02 - 0.27 * i
+        band(a, z1 - 0.3, z1, 1.06, 0.62, 0.2, "plate_mid" if i % 2 == 0 else "plate_dark",
+             grow=0.04)
+    # Pectoral plates (left one cracked), center ridge.
     for s in (1, -1):
-        a.box((0.8, 0.08, 0.7), "steel", pos=(s * 0.5, -0.66, 0.38), rot=(0, s * -8, 0))
-        a.box((0.75, 0.08, 0.5), "steel", pos=(s * 0.46, -0.65, -0.35))
-    # Gorget.
-    a.shell([(0.72, 0.66, 0.5, 0.16), (0.98, 0.58, 0.44, 0.14)], "steel")
-    # Back plate and crossed straps.
-    a.box((1.7, 0.08, 1.2), "steel", pos=(0, 0.66, 0.1))
+        a.box((0.84, 0.1, 0.64), "plate_corrupt" if s > 0 else "plate_mid",
+              pos=(s * 0.5, -0.71, 0.42), rot=(0, s * -8, 0), bottom=(0.9, 1))
+    a.box((0.17, 0.13, 1.55), "plate_trim", pos=(0, -0.73, 0.0), top=(1, 0.6))
+    # Gorget with flared collar plates.
+    a.shell([(0.7, 0.68, 0.52, 0.16), (1.02, 0.6, 0.46, 0.14)], "plate_trim")
     for s in (1, -1):
-        a.box((0.22, 0.06, 2.0), "leather", pos=(0, 0.72, 0.0), rot=(0, s * 38, 0))
-    # Glowing V on the chest and its stem.
+        a.box((0.5, 0.95, 0.16), "plate_mid", pos=(s * 0.64, 0, 0.9), rot=(0, s * -22, 0))
+    # Back: plate, spine ridge, torn cloth and crossed straps with a buckle.
+    a.box((1.8, 0.1, 1.3), "plate_mid", pos=(0, 0.69, 0.12))
+    a.box((0.15, 0.1, 1.45), "plate_trim", pos=(0, 0.75, 0.05))
+    a.cloth([-0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75], 0.75,
+            [-0.9, -1.35, -1.0, -1.5, -1.1, -1.4, -0.95], 0.78, "cloth_dark", sag=0.04)
     for s in (1, -1):
-        g.box((0.08, 0.06, 0.72), "glow", pos=(s * 0.22, -0.74, 0.32), rot=(0, s * 38, 0))
-    g.box((0.08, 0.06, 0.5), "glow", pos=(0, -0.74, -0.15))
+        a.box((0.22, 0.06, 2.0), "leather_strap", pos=(0, 0.86, 0.05), rot=(0, s * 38, 0))
+    a.box((0.28, 0.06, 0.28), "buckle", pos=(0, 0.9, 0.05))
+    # Glowing V with its stem, and cracks breaking out of the left chest.
+    for s in (1, -1):
+        g.box((0.09, 0.06, 0.74), "glow", pos=(s * 0.22, -0.8, 0.33), rot=(0, s * 38, 0))
+    g.box((0.09, 0.06, 0.55), "glow", pos=(0, -0.8, -0.16))
+    rnd = random.Random(4)
+    crystals(g, rnd, 4, lambda: (rnd.uniform(0.75, 0.95), -0.72, rnd.uniform(0.1, 0.7)),
+             lambda: (rnd.uniform(0.3, 1), -1, rnd.uniform(-0.2, 0.8)), (0.15, 0.3), (0.04, 0.07))
     return a, g
 
 
 def lower_torso():
     a, g = Piece(), Piece()
-    a.shell([(-0.22, 1.12, 0.64, 0.2), (0.22, 1.12, 0.64, 0.2)], "leather")
-    a.box((0.46, 0.08, 0.36), "buckle", pos=(0, -0.68, 0))
-    a.box((0.24, 0.04, 0.18), "black", pos=(0, -0.72, 0))
+    # Main belt with a big square buckle, and a second, slanted belt.
+    band(a, -0.22, 0.2, 1.14, 0.66, 0.2, "leather_strap")
+    a.box((0.52, 0.1, 0.44), "buckle", pos=(0, -0.7, 0))
+    a.box((0.28, 0.05, 0.22), "black", pos=(0, -0.75, 0))
+    a.box((0.05, 0.05, 0.22), "buckle", pos=(0.04, -0.77, 0))
+    band(a, -0.36, -0.22, 1.17, 0.69, 0.21, "leather", rot=(0, 7, 0))
+    a.box((0.24, 0.08, 0.2), "buckle", pos=(0.5, -0.72, -0.24), rot=(0, 7, 0))
+    # Pouches.
+    for s, y in ((1, -0.55), (-1, -0.55), (-1, 0.5)):
+        a.box((0.34, 0.26, 0.4), "leather", pos=(s * 0.8, y, -0.22))
+        a.box((0.37, 0.29, 0.13), "leather_strap", pos=(s * 0.8, y, -0.04))
+    # Chainmail skirt under everything.
+    a.shell([(-1.05, 1.18, 0.7, 0.22), (-0.15, 1.1, 0.64, 0.2)], "chainmail")
+    # Hip tassets: two overlapping plates per side.
     for s in (1, -1):
-        a.box((0.32, 0.26, 0.36), "leather_dark", pos=(s * 0.82, -0.5, -0.15))
-        # Hip plates (tassets).
-        a.box((0.16, 0.95, 0.75), "steel_dark", pos=(s * 1.14, 0, -0.5), rot=(0, s * 12, 0),
-              bottom=(1, 0.8))
-    # Tattered tabard, front and back.
-    xs = [-0.62, -0.45, -0.3, -0.12, 0.05, 0.22, 0.38, 0.52, 0.62]
-    front = [-1.55, -1.85, -1.6, -2.0, -1.7, -1.95, -1.62, -1.82, -1.5]
-    back = [-1.7, -2.05, -1.8, -2.15, -1.85, -2.1, -1.78, -2.0, -1.65]
-    a.cloth(xs, -0.12, front, -0.67, "cloth", sag=-0.06)
-    a.cloth(xs, -0.12, back, 0.67, "cloth_dark", sag=0.06)
+        for i in range(2):
+            a.box((0.17, 1.02 - 0.06 * i, 0.5), "plate_mid" if i == 0 else "plate_dark",
+                  pos=(s * (1.16 + 0.03 * i), 0, -0.4 - 0.38 * i), rot=(0, s * 12, 0),
+                  bottom=(1, 0.88))
+    # Tattered tabard front and back, with ragged side strips.
+    xs = [-0.58, -0.43, -0.29, -0.14, 0.0, 0.14, 0.29, 0.43, 0.58]
+    a.cloth(xs, -0.15, [-1.55, -1.9, -1.62, -2.05, -1.72, -2.0, -1.6, -1.85, -1.5], -0.74,
+            "cloth", sag=-0.06)
+    a.cloth(xs, -0.15, [-1.75, -2.1, -1.85, -2.2, -1.9, -2.15, -1.8, -2.05, -1.7], 0.74,
+            "cloth_dark", sag=0.06)
+    for s in (1, -1):
+        a.cloth([s * 0.66, s * 0.8, s * 0.95], -0.2, [-1.2, -1.55, -1.25], -0.72, "cloth_dark",
+                sag=-0.03)
     return a, g
 
 
 def upper_arm(side):
     a, g = Piece(), Piece()
-    a.shell([(-0.6, 0.58, 0.58, 0.15), (0.4, 0.6, 0.6, 0.15)], "steel_dark")
-    # Layered pauldron: a dome plus three plates stepping down the outside.
-    a.shell([(0.32, 0.8, 0.74, 0.22, side * 0.1, 0), (0.62, 0.72, 0.68, 0.22, side * 0.05, 0),
-             (0.86, 0.38, 0.4, 0.16, 0, 0)], "steel_dark")
-    for i in range(3):
-        a.box((0.5, 1.4 - 0.12 * i, 0.3), "steel" if i % 2 == 0 else "steel_dark",
-              pos=(side * (0.6 + 0.05 * i), 0, 0.42 - 0.24 * i), rot=(0, side * 28, 0),
-              bottom=(1, 0.92))
+    corrupt = "plate_corrupt" if side > 0 else "plate_dark"
+    # Mail sleeve, rerebrace and a trim lame at the elbow.
+    band(a, -0.6, 0.45, 0.55, 0.55, 0.14, "chainmail")
+    band(a, -0.5, 0.3, 0.6, 0.6, 0.15, corrupt)
+    band(a, -0.62, -0.46, 0.63, 0.63, 0.16, "plate_trim")
+    # Big layered pauldron: dome plus four lames stepping down the outside.
+    a.shell([(0.22, 0.84, 0.78, 0.24, side * 0.12, 0), (0.6, 0.78, 0.72, 0.24, side * 0.06, 0),
+             (0.88, 0.44, 0.46, 0.16, 0, 0)], corrupt)
+    band(a, 0.12, 0.26, 0.86, 0.8, 0.25, "plate_trim", dx=side * 0.12)
+    for i in range(4):
+        a.box((0.54, 1.5 - 0.1 * i, 0.32), "plate_mid" if i % 2 == 0 else "plate_dark",
+              pos=(side * (0.64 + 0.05 * i), 0, 0.44 - 0.22 * i), rot=(0, side * 30, 0),
+              bottom=(1, 0.9))
+    # Front/back edge plates so the pauldron reads chunky from the side too.
+    for y in (-1, 1):
+        a.box((0.9, 0.12, 0.5), "plate_mid", pos=(side * 0.2, y * 0.82, 0.45), rot=(y * -12, 0, 0),
+              bottom=(0.85, 1))
     rnd = random.Random(10 + side)
     if side > 0:
-        # Left shoulder: the corruption grows out of it as a crystal cluster.
-        for _ in range(8):
-            base = (side * rnd.uniform(0.2, 0.75), rnd.uniform(-0.35, 0.35), rnd.uniform(0.6, 0.85))
-            direction = (side * rnd.uniform(0.2, 1.0), rnd.uniform(-0.5, 0.5), rnd.uniform(0.6, 1.2))
-            g.spike(base, direction, rnd.uniform(0.45, 1.0), rnd.uniform(0.08, 0.15), "glow",
-                    sides=5, twist=rnd.uniform(0, 3))
+        # Left shoulder: the corruption bursts out as a large crystal cluster.
+        crystals(g, rnd, 12, lambda: (rnd.uniform(0.15, 0.8), rnd.uniform(-0.45, 0.45), rnd.uniform(0.55, 0.9)),
+                 lambda: (rnd.uniform(0.1, 1.0), rnd.uniform(-0.6, 0.6), rnd.uniform(0.5, 1.2)),
+                 (0.45, 1.15), (0.07, 0.16))
+        crystals(g, rnd, 5, lambda: (0.95, rnd.uniform(-0.5, 0.5), rnd.uniform(-0.1, 0.4)),
+                 lambda: (1, rnd.uniform(-0.5, 0.5), rnd.uniform(-0.2, 0.6)), (0.25, 0.5), (0.05, 0.1))
     else:
-        # Right shoulder stays clean steel with a few blunt spikes.
-        for y in (-0.3, 0.0, 0.3):
-            a.spike((side * 0.35, y, 0.8), (side * 0.4, 0, 1), 0.38, 0.09, "steel_light", sides=4)
+        # Right shoulder: clean steel with a raised, pointed gardbrace.
+        a.box((0.16, 1.25, 0.55), "plate_trim", pos=(side * 0.32, 0, 1.0), rot=(0, side * 15, 0),
+              top=(1, 0.3))
+        for y in (-0.38, 0.0, 0.38):
+            a.spike((side * 0.55, y, 0.82), (side * 0.5, 0, 1), 0.4, 0.09, "plate_trim", sides=4)
     return a, g
 
 
 def lower_arm(side):
     a, g = Piece(), Piece()
-    a.shell([(-0.53, 0.56, 0.56, 0.14), (0.5, 0.61, 0.61, 0.15)], "steel_dark")
-    a.box((0.6, 0.12, 0.85), "steel", pos=(side * 0.0, -0.6, 0.0), bottom=(0.7, 1))
-    # Elbow cop at the back of the top.
-    a.spike((0, 0.55, 0.42), (0, 1, 0.25), 0.32, 0.26, "steel_light", sides=4)
+    corrupt = "plate_corrupt" if side > 0 else "plate_dark"
+    a.shell([(-0.53, 0.56, 0.56, 0.14), (0.5, 0.61, 0.61, 0.15)], corrupt)
+    a.box((0.64, 0.12, 0.82), "plate_mid", pos=(0, -0.62, 0.0), bottom=(0.7, 1))
+    a.box((0.12, 0.74, 0.82), "plate_mid", pos=(side * 0.62, 0, 0.0), bottom=(1, 0.75))
+    band(a, -0.56, -0.42, 0.65, 0.65, 0.16, "plate_trim")
+    band(a, -0.02, 0.1, 0.63, 0.63, 0.16, "leather_strap")
+    # Couter: elbow plate with a backward spike.
+    a.box((0.72, 0.22, 0.46), "plate_trim", pos=(0, 0.63, 0.42), top=(0.8, 1))
+    a.spike((0, 0.7, 0.42), (0, 1, 0.2), 0.4, 0.22, "plate_trim", sides=4)
     if side > 0:
         rnd = random.Random(21)
-        for _ in range(5):
-            base = (0.6, rnd.uniform(-0.4, 0.4), rnd.uniform(-0.4, 0.45))
-            g.spike(base, (1, rnd.uniform(-0.5, 0.5), rnd.uniform(-0.2, 0.9)),
-                    rnd.uniform(0.25, 0.5), rnd.uniform(0.06, 0.1), "glow", sides=5)
+        crystals(g, rnd, 8, lambda: (rnd.uniform(0.55, 0.7), rnd.uniform(-0.45, 0.45), rnd.uniform(-0.45, 0.45)),
+                 lambda: (1, rnd.uniform(-0.6, 0.6), rnd.uniform(-0.2, 0.9)), (0.25, 0.6), (0.05, 0.11))
+        crystals(g, rnd, 3, lambda: (rnd.uniform(-0.2, 0.3), 0.62, rnd.uniform(-0.3, 0.3)),
+                 lambda: (rnd.uniform(-0.2, 0.6), 1, rnd.uniform(0, 0.8)), (0.2, 0.4), (0.05, 0.08))
     return a, g
 
 
 def hand(side):
     a, g = Piece(), Piece()
-    a.shell([(-0.2, 0.54, 0.54, 0.14), (0.12, 0.56, 0.56, 0.14), (0.24, 0.66, 0.66, 0.16)],
-            "steel_dark")
-    a.box((0.9, 0.12, 0.2), "steel", pos=(0, -0.58, -0.05))
+    band(a, -0.22, 0.06, 0.54, 0.54, 0.14, "plate_dark")
+    a.shell([(0.04, 0.64, 0.64, 0.16), (0.3, 0.71, 0.71, 0.18)], "plate_trim")
+    # Knuckle plates and a thumb plate.
+    for x in (-0.3, -0.1, 0.1, 0.3):
+        a.box((0.17, 0.1, 0.15), "plate_mid", pos=(x, -0.57, -0.1), top=(0.8, 1))
+    a.box((0.12, 0.3, 0.26), "plate_mid", pos=(-side * 0.58, -0.25, -0.05))
     if side > 0:
-        g.spike((0.55, 0.1, 0.1), (1, 0.2, 0.6), 0.3, 0.07, "glow", sides=5)
+        rnd = random.Random(31)
+        crystals(g, rnd, 3, lambda: (0.56, rnd.uniform(-0.3, 0.3), rnd.uniform(-0.1, 0.2)),
+                 lambda: (1, rnd.uniform(-0.4, 0.4), rnd.uniform(0, 0.8)), (0.2, 0.35), (0.05, 0.07))
     return a, g
 
 
 def upper_leg(side):
     a, g = Piece(), Piece()
-    a.shell([(-0.61, 0.57, 0.57, 0.15), (0.6, 0.6, 0.6, 0.15)], "steel_dark")
-    a.box((0.55, 0.08, 0.95), "steel", pos=(0, -0.62, 0.1), bottom=(0.7, 1))
+    a.shell([(-0.55, 0.57, 0.57, 0.15), (0.6, 0.6, 0.6, 0.15)], "plate_dark")
+    for i in range(3):
+        a.box((0.8, 0.11, 0.3), "plate_mid" if i % 2 == 0 else "plate_dark",
+              pos=(0, -0.65, 0.42 - 0.33 * i), rot=(8, 0, 0), bottom=(0.94, 1))
+    a.box((0.12, 0.8, 0.9), "plate_mid", pos=(side * 0.62, 0, 0.05), bottom=(1, 0.8))
+    for z in (0.22, -0.32):
+        band(a, z - 0.06, z + 0.06, 0.63, 0.63, 0.16, "leather_strap")
     return a, g
 
 
 def lower_leg(side):
     a, g = Piece(), Piece()
-    a.shell([(-0.6, 0.56, 0.56, 0.15), (0.55, 0.6, 0.6, 0.15)], "steel_dark")
-    a.box((0.16, 0.1, 0.95), "steel", pos=(0, -0.6, -0.12))
-    # Knee cop with a forward point.
-    a.box((0.66, 0.2, 0.42), "steel", pos=(0, -0.62, 0.5), top=(0.8, 1), bottom=(0.8, 1))
-    a.spike((0, -0.7, 0.5), (0, -1, 0.1), 0.32, 0.2, "steel_light", sides=4)
+    a.shell([(-0.6, 0.56, 0.56, 0.15), (0.48, 0.6, 0.6, 0.15)], "plate_dark")
+    band(a, 0.44, 0.6, 0.62, 0.62, 0.16, "plate_trim")
+    a.box((0.17, 0.12, 0.95), "plate_trim", pos=(0, -0.62, -0.14), bottom=(0.6, 1))
+    band(a, 0.0, 0.1, 0.62, 0.62, 0.16, "leather_strap")
+    # Poleyn: knee cop with side wings and a forward point.
+    a.box((0.7, 0.22, 0.46), "plate_mid", pos=(0, -0.64, 0.52), top=(0.8, 1), bottom=(0.8, 1))
+    for s in (1, -1):
+        a.box((0.12, 0.42, 0.44), "plate_trim", pos=(s * 0.42, -0.5, 0.52), rot=(0, s * 20, 0))
+    a.spike((0, -0.74, 0.52), (0, -1, 0.1), 0.36, 0.2, "plate_trim", sides=4)
     return a, g
 
 
 def foot(side):
     a, g = Piece(), Piece()
-    a.shell([(-0.22, 0.58, 0.68, 0.14, 0, -0.14), (0.22, 0.56, 0.6, 0.14, 0, -0.04)],
-            "steel_dark")
-    a.spike((0, -0.8, -0.1), (0, -1, 0.15), 0.32, 0.22, "steel", sides=4)
-    a.box((1.18, 0.5, 0.14), "steel", pos=(0, -0.2, 0.12))
+    a.shell([(-0.2, 0.58, 0.68, 0.14, 0, -0.14), (0.2, 0.56, 0.6, 0.14, 0, -0.04)], "plate_dark")
+    band(a, 0.12, 0.28, 0.62, 0.62, 0.16, "plate_trim")
+    for i in range(3):
+        a.box((1.12 - 0.08 * i, 0.3, 0.13), "plate_mid" if i % 2 == 0 else "plate_dark",
+              pos=(0, -0.5 - 0.2 * i, 0.16 - 0.11 * i), rot=(16, 0, 0))
+    a.spike((0, -0.88, -0.1), (0, -1, 0.15), 0.3, 0.2, "plate_mid", sides=4)
+    a.box((1.12, 1.5, 0.08), "leather_strap", pos=(0, -0.16, -0.21))
     return a, g
 
 
@@ -430,15 +495,17 @@ def build_greatsword(armor_mat, glow_mat):
     # Grip with leather wraps.
     grip.shell([(-0.65, 0.11, 0.11, 0.04), (0.65, 0.11, 0.11, 0.04)], "leather")
     for z in (-0.4, 0.0, 0.4):
-        grip.box((0.26, 0.26, 0.08), "leather_dark", pos=(0, 0, z))
+        grip.box((0.26, 0.26, 0.08), "leather_strap", pos=(0, 0, z))
     # Blade: diamond section, slightly leaf-shaped, with a long point.
     def diamond(w, t):
         return [(w, 0), (0, t), (-w, 0), (0, -t)]
+    # The lower blade, nearest the guard, is cracked by the corruption.
     blade.loft([(0.72, diamond(0.3, 0.07)), (1.4, diamond(0.34, 0.075)),
-                (3.6, diamond(0.3, 0.065)), (5.0, diamond(0.2, 0.05))], "blade",
-               tip=(0, 0, 5.9))
+                (2.4, diamond(0.33, 0.072))], "blade_corrupt")
+    blade.loft([(2.4, diamond(0.33, 0.072)), (3.6, diamond(0.3, 0.065)),
+                (5.0, diamond(0.2, 0.05))], "blade", tip=(0, 0, 5.9))
     # Fuller.
-    blade.box((0.08, 0.16, 3.2), "steel_dark", pos=(0, 0, 2.6), top=(0.5, 1))
+    blade.box((0.08, 0.16, 3.2), "black", pos=(0, 0, 2.6), top=(0.5, 1))
     # Jagged teeth along both edges.
     rnd = random.Random(7)
     for s in (1, -1):
@@ -446,7 +513,7 @@ def build_greatsword(armor_mat, glow_mat):
         while z < 4.8:
             w = 0.34 if z < 3.6 else 0.3 - (z - 3.6) * 0.07
             blade.spike((s * (w - 0.03), 0, z), (s, 0, rnd.uniform(0.6, 1.1)),
-                        rnd.uniform(0.18, 0.3), 0.045, "steel_light", sides=4)
+                        rnd.uniform(0.18, 0.3), 0.045, "plate_trim", sides=4)
             z += rnd.uniform(0.35, 0.6)
     # Corruption crystals creeping up from the guard.
     for _ in range(9):
@@ -456,20 +523,20 @@ def build_greatsword(armor_mat, glow_mat):
                    rnd.uniform(0.15, 0.32), rnd.uniform(0.04, 0.07), "glow", sides=5)
     glow.box((0.05, 0.17, 1.4), "glow", pos=(0, 0, 1.45), top=(0.3, 1))
     # Cross-guard with spiked, downturned quillons.
-    guard.box((1.0, 0.24, 0.2), "steel_dark", pos=(0, 0, 0.7))
+    guard.box((1.0, 0.24, 0.2), "plate_dark", pos=(0, 0, 0.7))
     for s in (1, -1):
-        guard.box((0.55, 0.2, 0.16), "steel_dark", pos=(s * 0.72, 0, 0.64), rot=(0, s * 18, 0),
+        guard.box((0.55, 0.2, 0.16), "plate_dark", pos=(s * 0.72, 0, 0.64), rot=(0, s * 18, 0),
                   top=(1, 0.8))
-        guard.spike((s * 0.95, 0, 0.55), (s, 0, -0.6), 0.35, 0.09, "steel", sides=4)
-        guard.spike((s * 0.35, 0, 0.8), (s * 0.5, 0, 1), 0.25, 0.06, "steel", sides=4)
-    guard.spike((0, -0.12, 0.7), (0, -1, 0.2), 0.2, 0.08, "steel", sides=4)
-    guard.spike((0, 0.12, 0.7), (0, 1, 0.2), 0.2, 0.08, "steel", sides=4)
+        guard.spike((s * 0.95, 0, 0.55), (s, 0, -0.6), 0.35, 0.09, "plate_mid", sides=4)
+        guard.spike((s * 0.35, 0, 0.8), (s * 0.5, 0, 1), 0.25, 0.06, "plate_mid", sides=4)
+    guard.spike((0, -0.12, 0.7), (0, -1, 0.2), 0.2, 0.08, "plate_mid", sides=4)
+    guard.spike((0, 0.12, 0.7), (0, 1, 0.2), 0.2, 0.08, "plate_mid", sides=4)
     # Spiked pommel.
     pommel.loft([(-0.82, diamond(0.12, 0.12)), (-0.95, diamond(0.22, 0.22)),
-                 (-1.08, diamond(0.12, 0.12))], "steel_dark", base=(0, 0, -1.3))
-    pommel.box((0.12, 0.12, 0.2), "steel", pos=(0, 0, -0.74))
+                 (-1.08, diamond(0.12, 0.12))], "plate_dark", base=(0, 0, -1.3))
+    pommel.box((0.12, 0.12, 0.2), "plate_mid", pos=(0, 0, -0.74))
     for s in (1, -1):
-        pommel.spike((s * 0.2, 0, -0.95), (s, 0, 0), 0.18, 0.05, "steel", sides=4)
+        pommel.spike((s * 0.2, 0, -0.95), (s, 0, 0), 0.18, 0.05, "plate_mid", sides=4)
     return [
         grip.to_object("Handle", armor_mat, (0, 0, 0)),
         blade.to_object("Blade", armor_mat, (0, 0, 0)),
@@ -488,10 +555,10 @@ def make_materials(img):
         bsdf = nodes["Principled BSDF"]
         tex = nodes.new("ShaderNodeTexImage")
         tex.image = img
-        tex.interpolation = "Closest"
+        tex.interpolation = "Linear"
         m.node_tree.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
-        bsdf.inputs["Metallic"].default_value = 0.0 if emission else 0.55
-        bsdf.inputs["Roughness"].default_value = 0.5
+        bsdf.inputs["Metallic"].default_value = 0.0 if emission else 0.35
+        bsdf.inputs["Roughness"].default_value = 0.55
         if emission:
             m.node_tree.links.new(tex.outputs["Color"], bsdf.inputs["Emission Color"])
             bsdf.inputs["Emission Strength"].default_value = 4.0
@@ -548,7 +615,7 @@ def build_body(mat):
     objs = []
     for part, (sx, sy, sz) in R15_SIZE.items():
         p = Piece()
-        p.box((sx, sz, sy), "black")
+        p.box((sx, sz, sy), "body")
         objs.append(p.to_object("Body_" + part, mat, R15_POS[part]))
     return objs
 
@@ -565,7 +632,7 @@ def setup_render():
     bg.inputs["Color"].default_value = (0.11, 0.11, 0.12, 1)
     bg.inputs["Strength"].default_value = 1.0
     scene.world = world
-    for name, loc, energy, size in (("Key", (-4, -6, 8), 1400, 4), ("Fill", (6, -4, 4), 500, 4),
+    for name, loc, energy, size in (("Key", (-4, -6, 8), 950, 4), ("Fill", (6, -4, 4), 260, 4),
                                     ("Rim", (0, 7, 6), 900, 3)):
         light = bpy.data.lights.new(name, "AREA")
         light.energy, light.size = energy, size
@@ -574,7 +641,7 @@ def setup_render():
         obj.rotation_euler = (Vector((0, 0, 3)) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
         scene.collection.objects.link(obj)
     floor = Piece()
-    floor.box((30, 30, 0.1), "steel_dark", pos=(0, 0, -0.05))
+    floor.box((30, 30, 0.1), "black", pos=(0, 0, -0.05))
     cam = bpy.data.cameras.new("Camera")
     cam.type = "ORTHO"
     cam_obj = bpy.data.objects.new("Camera", cam)
@@ -640,7 +707,8 @@ def main():
     for d in (EXPORT_DIR, RENDER_DIR, ROBLOX_DIR):
         os.makedirs(d, exist_ok=True)
 
-    img = make_palette_image(os.path.join(EXPORT_DIR, "onehorn_palette.png"))
+    tex_path = build_atlas(os.path.join(EXPORT_DIR, "onehorn_texture.png"))
+    img = bpy.data.images.load(tex_path)
     armor_mat, glow_mat = make_materials(img)
     armor = build_armor(armor_mat, glow_mat)
     sword = build_greatsword(armor_mat, glow_mat)
@@ -655,7 +723,7 @@ def main():
     body = build_body(armor_mat)
     for o in sword:
         # Point the blade down, forward and outward, like the concept pose.
-        aim = Vector((-0.45, -0.55, -0.7)).to_track_quat("Z", "Y").to_matrix().to_4x4()
+        aim = Vector((-0.3, -0.85, -0.45)).to_track_quat("Z", "Y").to_matrix().to_4x4()
         o.matrix_world = Matrix.Translation(Vector(R15_POS["RightHand"]) + Vector((0, -0.1, 0))) @ aim
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(EXPORT_DIR, "onehorn.blend"))
 

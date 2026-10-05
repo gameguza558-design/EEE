@@ -15,7 +15,10 @@
 - `<ส่วน>_Glow` ส่วนเรืองแสงสีม่วง ได้แก่ ตาเดียวและเขา (Head), ตัว V กลางอก (UpperTorso),
   คริสตัลที่ไหล่ แขน และมือซ้าย
 
-สีทั้งหมดมาจาก texture เล็ก ๆ ภาพเดียว (`onehorn_palette.png`) ที่ฝังอยู่ใน FBX แล้ว
+Texture เป็นภาพวาด 1024×1024 ภาพเดียว (`onehorn_texture.png`) ฝังอยู่ใน FBX แล้ว
+ในภาพมีเหล็กที่มีขอบไฮไลต์ หมุดย้ำ และรอยขีดข่วน เหล็กด้านซ้ายมีรอยแตกเรืองแสง
+นอกจากนี้มีหนังพร้อมรอยเย็บ หัวเข็มขัดทองเหลือง ผ้าทอเปื้อนคราบ เกราะโซ่ ใบดาบ และเขา
+ทุกหน้าของโมเดล map ลงเต็มช่องของวัสดุตัวเอง แต่ละแผ่นจึงมีขอบและหมุดของตัวเอง
 ส่วน `_Glow` สคริปต์จะเปลี่ยนเป็น Material Neon สีม่วงให้อัตโนมัติ
 
 ดาบ `export/onehorn_greatsword.fbx` (Lightly Corrupted Greatsword) มีชิ้น `Handle`, `Blade`, `Guard`, `Pommel`, `Blade_Glow`
@@ -55,7 +58,7 @@
 
 ```
 pip install bpy==4.2.0 pillow
-python3 onehorn/build_onehorn.py
+python3 onehorn/build_onehorn.py    # texture สร้างจาก onehorn/texture_gen.py
 ```
 
 สคริปต์สร้าง FBX, ภาพ render และ `OneHornArmor.server.lua` ใหม่ทั้งหมด
