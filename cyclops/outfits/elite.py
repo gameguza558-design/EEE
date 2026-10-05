@@ -10,13 +10,18 @@ from outfits.common import Outfit
 # One function per body region. `side` is +1 for Left (+X), -1 for Right.
 # The concept's corruption grows on the character's left side, so left pieces use
 # the cracked "plate_corrupt" texture and carry the crystals.
+# Variant switches so knights can share the One-Horn's design language.
+CFG = dict(horn=True, twin_horns=0.0, crest=False, head_crystals=True, chest_v=True, crystals=1.0,
+           right_crystals=False)
+
+
 def band(p, z0, z1, w, d, c, color, grow=0.0, dx=0.0, dy=0.0, rot=(0, 0, 0)):
     """A ring of armor between z0 and z1, flaring by `grow` toward the top."""
     p.shell([(z0, w, d, c, dx, dy), (z1, w + grow, d + grow, c, dx, dy)], color, rot=rot)
 
 
 def crystals(g, rnd, count, base_fn, dir_fn, length, radius):
-    for _ in range(count):
+    for _ in range(int(round(count * CFG["crystals"]))):
         g.spike(base_fn(), dir_fn(), rnd.uniform(*length), rnd.uniform(*radius), "glow",
                 sides=5, twist=rnd.uniform(0, 3))
 
@@ -44,15 +49,22 @@ def head():
         a.box((1.36 - 0.1 * i, 0.14, 0.22), "plate_mid" if i % 2 else "plate_dark",
               pos=(0, 0.74 + 0.05 * i, -0.36 - 0.17 * i), rot=(22, 0, 0))
     # The horn: dark metal fading to purple, set in a trim collar.
-    band(a, 0.66, 0.78, 0.22, 0.22, 0.07, "plate_trim", dy=-0.12)
-    a.spike((0, -0.12, 0.72), (0, 0.18, 1), 1.4, 0.17, "horn", sides=6)
+    if CFG["horn"]:
+        band(a, 0.66, 0.78, 0.22, 0.22, 0.07, "plate_trim", dy=-0.12)
+        a.spike((0, -0.12, 0.72), (0, 0.18, 1), 1.4, 0.17, "horn", sides=6)
+    if CFG["twin_horns"]:
+        k = CFG["twin_horns"]
+        for s in (1, -1):
+            a.spike((s * 0.42, -0.05, 0.6), (s * 0.7, 0.15, 1), 0.9 * k, 0.15 * k, "horn", sides=6)
+    if CFG["crest"]:
+        a.box((0.16, 1.5, 0.45), "plate_trim", pos=(0, 0.05, 0.85), top=(0.4, 0.9))
     # Cyclops eye and corruption creeping over the left side of the helmet.
     g.box((0.22, 0.05, 0.22), "glow", pos=(0, -0.875, 0.07), rot=(0, 45, 0))
     g.box((0.5, 0.03, 0.035), "glow", pos=(0, -0.873, 0.07))
     rnd = random.Random(1)
-    crystals(g, rnd, 5, lambda: (rnd.uniform(0.6, 0.78), rnd.uniform(-0.3, 0.4), rnd.uniform(0.15, 0.6)),
+    crystals(g, rnd, 5 if CFG["head_crystals"] else 0, lambda: (rnd.uniform(0.6, 0.78), rnd.uniform(-0.3, 0.4), rnd.uniform(0.15, 0.6)),
              lambda: (1, rnd.uniform(-0.4, 0.4), rnd.uniform(0.3, 1.0)), (0.2, 0.45), (0.05, 0.09))
-    for _ in range(3):
+    for _ in range(3 if CFG["horn"] else 0):
         g.spike((rnd.uniform(-0.12, 0.12), -0.12, 0.74), (rnd.uniform(-0.5, 0.5), rnd.uniform(-0.4, 0.4), 1),
                 rnd.uniform(0.15, 0.3), 0.05, "glow", sides=5)
     return a, g
@@ -86,8 +98,10 @@ def upper_torso():
     a.box((0.28, 0.06, 0.28), "buckle", pos=(0, 0.9, 0.05))
     # Glowing V with its stem, and cracks breaking out of the left chest.
     for s in (1, -1):
-        g.box((0.09, 0.06, 0.74), "glow", pos=(s * 0.22, -0.8, 0.33), rot=(0, s * 38, 0))
-    g.box((0.09, 0.06, 0.55), "glow", pos=(0, -0.8, -0.16))
+        if CFG["chest_v"]:
+            g.box((0.09, 0.06, 0.74), "glow", pos=(s * 0.22, -0.8, 0.33), rot=(0, s * 38, 0))
+    if CFG["chest_v"]:
+        g.box((0.09, 0.06, 0.55), "glow", pos=(0, -0.8, -0.16))
     rnd = random.Random(4)
     crystals(g, rnd, 4, lambda: (rnd.uniform(0.75, 0.95), -0.72, rnd.uniform(0.1, 0.7)),
              lambda: (rnd.uniform(0.3, 1), -1, rnd.uniform(-0.2, 0.8)), (0.15, 0.3), (0.04, 0.07))
@@ -160,6 +174,10 @@ def upper_arm(side):
               top=(1, 0.3))
         for y in (-0.38, 0.0, 0.38):
             a.spike((side * 0.55, y, 0.82), (side * 0.5, 0, 1), 0.4, 0.09, "plate_trim", sides=4)
+        if CFG["right_crystals"]:
+            crystals(g, rnd, 8, lambda: (-rnd.uniform(0.2, 0.75), rnd.uniform(-0.45, 0.45), rnd.uniform(0.6, 0.95)),
+                     lambda: (-rnd.uniform(0.1, 1.0), rnd.uniform(-0.6, 0.6), rnd.uniform(0.5, 1.2)),
+                     (0.35, 0.9), (0.06, 0.13))
     return a, g
 
 
@@ -238,8 +256,19 @@ def foot(side):
 
 
 
-def elite_onehorn():
-    o = Outfit("EliteOneHorn", corruption=0.5, seed=31)
+def elite_onehorn(name="EliteOneHorn", corruption=0.5, **cfg):
+    """The One-Horn; with cfg overrides (see CFG) it also builds the knight variants."""
+    saved = dict(CFG)
+    CFG.update(cfg)
+    try:
+        return _build(name, corruption)
+    finally:
+        CFG.clear()
+        CFG.update(saved)
+
+
+def _build(name, corruption):
+    o = Outfit(name, corruption=corruption, seed=31)
     builders = {"Head": head, "UpperTorso": upper_torso, "LowerTorso": lower_torso}
     for prefix, side in (("Left", 1), ("Right", -1)):
         builders[prefix + "UpperArm"] = lambda s=side: upper_arm(s)

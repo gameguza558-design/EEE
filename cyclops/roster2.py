@@ -21,6 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import bpy  # noqa: E402
+from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 import bmesh  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
@@ -151,27 +152,55 @@ def strap(p, color, front=True, back=True, from_right=True):
         p.dashes("UpperTorso", face, [a, b], mul(color, 1.6), dash=8, gap=8)
 
 
+def soft_shapes(p, shapes, color, strength, blur=6):
+    """Blend soft-edged painted shapes (anime-style cel shading) onto the canvas.
+    shapes: list of (part, face, kind, args) with kind "poly" (pts) or "ellipse" (cu, cv, ru, rv)."""
+    mask = Image.new("L", p.img.size, 0)
+    md = ImageDraw.Draw(mask)
+    for part, face, kind, args in shapes:
+        if kind == "poly":
+            md.polygon([p.at(part, face, u, v) for u, v in args], fill=255)
+        else:
+            cu, cv, ru, rv = args
+            x0, y0, x1, y1 = style2.face_rect(part, face)
+            cx, cy = p.at(part, face, cu, cv)
+            rx, ry = ru * (x1 - x0), rv * (y1 - y0)
+            md.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(blur)).point(lambda x: int(x * strength))
+    p.img = Image.composite(Image.new("RGB", p.img.size, color), p.img, mask)
+    p.d = ImageDraw.Draw(p.img)
+
+
 def muscles(p, skin, part="UpperTorso"):
-    """Painted pecs, abs and back muscles for bare torsos."""
-    line, hi = mul(skin, 0.68), mul(skin, 1.08)
-    for s in (0, 1):
-        x0, x1 = (0.06, 0.48) if s == 0 else (0.52, 0.94)
-        p.poly(part, "front", [(x0, 0.12), (x1, 0.12), (x1, 0.4), ((x0 + x1) / 2, 0.47), (x0, 0.38)], hi)
-        p.line(part, "front", [(x0, 0.38), ((x0 + x1) / 2, 0.47), (x1, 0.4)], line, width=6)
-    p.line(part, "front", [(0.5, 0.12), (0.5, 1.0)], line, width=5)
-    for v in (0.55, 0.7, 0.85):
-        for u0 in (0.3, 0.52):
-            p.box(part, "front", u0, v, u0 + 0.18, v + 0.12, hi, outline=line, width=4)
-    for s in (0.12, 0.88):
-        p.line(part, "front", [(s, 0.45), (0.25 if s < 0.5 else 0.75, 0.98)], line, width=5)
-    p.line(part, "back", [(0.5, 0.05), (0.5, 0.95)], line, width=5)
-    for s in (0, 1):
-        x0, x1 = (0.08, 0.46) if s == 0 else (0.54, 0.92)
-        p.poly(part, "back", [(x0, 0.15), (x1, 0.1), (x1, 0.5), (x0, 0.62)], hi)
+    """Anime-style muscle shading: soft shadow shapes under the pecs, between the abs and
+    along the obliques, with highlights on the pec tops, ab pads, delts and biceps."""
+    shadow = (int(skin[0] * 0.62), int(skin[1] * 0.55), int(skin[2] * 0.68))
+    light = mul(skin, 1.12)
+    dark, hi = [], []
+    for sgn in (1, -1):
+        def m(u):  # mirror around the centre line
+            return 0.5 + sgn * (u - 0.5)
+        dark.append((part, "front", "poly", [(m(0.06), 0.34), (m(0.28), 0.47), (m(0.49), 0.44), (m(0.49), 0.5),
+                                              (m(0.28), 0.54), (m(0.06), 0.42)]))  # under the pecs
+        dark.append((part, "front", "poly", [(m(0.1), 0.52), (m(0.17), 0.52), (m(0.33), 0.99), (m(0.25), 0.99)]))  # obliques
+        hi.append((part, "front", "ellipse", (m(0.28), 0.28, 0.17, 0.09)))  # pec tops
+        for v in (0.6, 0.73, 0.86):
+            hi.append((part, "front", "ellipse", (m(0.41), v, 0.065, 0.045)))  # ab pads
+            dark.append((part, "front", "ellipse", (m(0.41), v + 0.065, 0.07, 0.012)))  # ab grooves
+        dark.append((part, "back", "poly", [(m(0.08), 0.5), (m(0.45), 0.36), (m(0.45), 0.42), (m(0.12), 0.6)]))
+        hi.append((part, "back", "ellipse", (m(0.27), 0.25, 0.17, 0.12)))
+    dark.append((part, "front", "ellipse", (0.5, 0.75, 0.012, 0.24)))  # centre line
+    dark.append((part, "front", "ellipse", (0.5, 0.3, 0.012, 0.12)))
+    dark.append((part, "back", "ellipse", (0.5, 0.5, 0.015, 0.42)))  # spine
     for side in ("Left", "Right"):
-        for f in ("front", "back"):
-            p.line(side + "UpperArm", f, [(0.15, 0.35), (0.5, 0.55), (0.85, 0.35)], line, width=5)
-            p.line(side + "LowerArm", f, [(0.3, 0.1), (0.4, 0.7)], line, width=4)
+        for f in ("front", "back", "left", "right"):
+            hi.append((side + "UpperArm", f, "ellipse", (0.5, 0.25, 0.4, 0.16)))  # delts
+            dark.append((side + "UpperArm", f, "ellipse", (0.5, 0.42, 0.42, 0.03)))  # delt line
+            hi.append((side + "UpperArm", f, "ellipse", (0.5, 0.66, 0.28, 0.18)))  # biceps
+            dark.append((side + "UpperArm", f, "ellipse", (0.5, 0.9, 0.35, 0.05)))
+            hi.append((side + "LowerArm", f, "ellipse", (0.45, 0.3, 0.25, 0.2)))
+    soft_shapes(p, dark, shadow, 0.75, blur=7)
+    soft_shapes(p, hi, light, 0.6, blur=10)
 
 
 def quilt(p, part, face, color):
@@ -341,37 +370,54 @@ def pelt():
     return h.finish()
 
 
+KNIGHT_TIERS = {
+    # One-Horn design language, escalating with rank.
+    "apprentice": dict(remap={"plate_dark": "plate_rust", "plate_mid": "iron", "plate_trim": "plate_mid",
+                              "plate_corrupt": "plate_rust"},
+                       cfg=dict(horn=False, head_crystals=False, chest_v=False, crystals=0.2), shield="round",
+                       gamb=(120, 98, 72)),
+    "apprentice_infected": dict(remap={"plate_dark": "plate_rust", "plate_mid": "iron", "plate_trim": "plate_mid"},
+                                cfg=dict(horn=False, head_crystals=False, chest_v=True, crystals=0.5), shield="round",
+                                gamb=(100, 80, 64)),
+    "mid": dict(remap={}, cfg=dict(horn=False, twin_horns=0.6, head_crystals=True, chest_v=True, crystals=0.8),
+                shield="heater", gamb=(60, 50, 56), cape=("cloth_dark", 2.4)),
+    "high": dict(remap={"plate_trim": "gold", "plate_mid": "plate_dark"},
+                 cfg=dict(horn=False, twin_horns=1.1, crest=True, head_crystals=True, chest_v=True, crystals=1.4,
+                          right_crystals=True), shield="kite", gamb=(40, 34, 44), cape=("cloth", 3.4)),
+}
+
+
+def remap_tiles(outfit, remap):
+    idx = {kit.TILES.index(a): kit.TILES.index(b) for a, b in remap.items()}
+    for kinds in outfit.pieces.values():
+        for piece in kinds.values():
+            for f in piece.bm.faces:
+                f[piece.col] = idx.get(f[piece.col], f[piece.col])
+
+
 def knight(kind, corruption_level, name, weapon, seed):
+    tier = KNIGHT_TIERS[kind]
     ch = Character(name, weapon=weapon, shield=True)
     skin = (128, 136, 130)
     p = Painter(seed=seed)
     skin_all(p, skin)
-    cyclops_face(p, skin, iris=(210, 90, 255) if corruption_level > 0.5 else (230, 170, 60),
-                 corruption=corruption_level > 0.5)
-    gamb = (120, 98, 72) if kind == "apprentice" else (60, 50, 56)
+    cyclops_face(p, skin, iris=(210, 90, 255), corruption=True)
+    gamb = tier["gamb"]
     shirt(p, gamb, sleeves="long")
-    for part in ("UpperTorso", "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm"):
-        for f in SIDES4:
-            quilt(p, part, f, gamb)
-    if kind != "apprentice":
-        for part in ("LowerTorso", "LeftUpperLeg", "RightUpperLeg"):
+    for part in style2.PARTS:
+        if part != "Head":
             for f in SIDES4:
-                chainmail(p, part, f)
-    else:
-        pants(p, (90, 72, 52), belt=None)
-        for part in ("LeftUpperLeg", "RightUpperLeg"):
-            for f in SIDES4:
-                quilt(p, part, f, (90, 72, 52))
-    p.box("UpperTorso", "front", 0.25, 0.0, 0.75, 1.0, (130, 36, 48))  # tabard
-    p.dashes("UpperTorso", "front", [(0.27, 0.02), (0.27, 0.98)], (210, 170, 90))
-    p.dashes("UpperTorso", "front", [(0.73, 0.02), (0.73, 0.98)], (210, 170, 90))
-    gloves(p, (70, 50, 36))
-    boots(p, (60, 44, 32), height=0.8, plates=(95, 92, 100) if kind != "apprentice" else None)
-    corruption(p, ["LeftUpperArm", "LeftLowerArm", "UpperTorso"], corruption_level, seed=seed)
+                quilt(p, part, f, gamb)
+    gloves(p, (50, 40, 34))
     p.shade()
     ch.painter = p
-    builder = {"apprentice": knights.apprentice, "mid": knights.mid, "high": knights.high}[kind]
-    ch.outfit = builder(name=name, corruption=corruption_level, seed=seed)
+    o = elite.elite_onehorn(name, corruption_level, **tier["cfg"])
+    remap_tiles(o, tier["remap"])
+    {"round": knights.round_shield, "heater": knights.heater_shield, "kite": knights.kite_shield}[tier["shield"]](o)
+    if "cape" in tier:
+        color, length = tier["cape"]
+        common.back_cloth(o, color, top=0.85, length=length, width=1.0, y=0.8)
+    ch.outfit = o
     return ch
 
 
@@ -389,6 +435,19 @@ def elite_onehorn():
     return ch
 
 
+def king_face(p, skin):
+    """The King's face: no mouth, a deep black socket (the glowing eye is geometry),
+    a heavy V brow and frown lines."""
+    P = "Head"
+    dark = (40, 14, 34)
+    p.ellipse(P, "front", 0.5, 0.55, 0.36, 0.17, (90, 50, 80))
+    p.ellipse(P, "front", 0.5, 0.55, 0.3, 0.11, dark)
+    p.poly(P, "front", [(0.1, 0.33), (0.5, 0.5), (0.9, 0.33), (0.9, 0.42), (0.5, 0.57), (0.1, 0.42)],
+           mul(skin, 0.5))
+    p.line(P, "front", [(0.46, 0.5), (0.43, 0.38)], mul(skin, 0.45), width=5)
+    p.line(P, "front", [(0.54, 0.5), (0.57, 0.38)], mul(skin, 0.45), width=5)
+
+
 def cyclops_king():
     ch = Character("CyclopsKing", glow=PINK)
     skin = (214, 192, 204)
@@ -402,7 +461,7 @@ def cyclops_king():
                 continue
             p.cracks(part, f, (60, 20, 50), PINK, count=6, seed=hash((part, f)) % 997)
     p.cracks("Head", "front", (60, 20, 50), PINK, count=2, seed=3)
-    cyclops_face(p, skin, iris=(255, 70, 190), corruption=True)
+    king_face(p, skin)
     pants(p, (40, 34, 44), belt=(55, 38, 28), buckle=(220, 180, 70))
     for part in ("LeftLowerLeg", "RightLowerLeg"):
         for f in SIDES4:  # torn hem
@@ -416,12 +475,16 @@ def cyclops_king():
                 p.line(side + "LowerArm", f, [(0, v), (1, v + 0.03)], (30, 24, 34), width=4)
     p.shade()
     ch.painter = p
-    ch.hairs.append(("Head", "Hair", hair.wild_mane(2), ((240, 230, 240), (180, 160, 190), (255, 255, 255))))
+    ch.hairs.append(("Head", "Hair", hair.king_mane(5), ((246, 240, 250), (150, 120, 190), (255, 255, 255))))
     o = ch.outfit
     h = o("Head")
     band(h, 0.32, 0.44, 0.66, 0.66, 0.24, "gold")
     h.spike((0, -0.42, 0.4), (0, 0.12, 1), 1.6, 0.2, "horn", sides=6)
     g = o("Head", "Glow")
+    # Glowing eye like the knights': a bright slit with a diamond core, set in the dark socket.
+    g.box((0.6, 0.04, 0.075), "glow", pos=(0, -0.625, 0.04))
+    g.box((0.2, 0.05, 0.2), "glow", pos=(0, -0.63, 0.04), rot=(0, 45, 0))
+    g.box((0.08, 0.06, 0.08), "glow", pos=(0, -0.645, 0.04), rot=(0, 45, 0))
     for i in range(7):
         ang = math.pi * (0.15 + 0.7 * i / 6)
         x, y = 0.68 * math.cos(ang), -0.68 * math.sin(ang)
@@ -441,7 +504,7 @@ def cyclops_king():
 ROSTER = {
     "stage1": [villager, hunter, woodcutter, wolf_rider,
                lambda: knight("apprentice", 0.3, "KnightApprentice", "ApprenticeSword", 21), elite_onehorn],
-    "stage2": [lambda: knight("apprentice", 0.55, "KnightApprenticeInfected", "ApprenticeAxe", 24),
+    "stage2": [lambda: knight("apprentice_infected", 0.55, "KnightApprenticeInfected", "ApprenticeAxe", 24),
                lambda: knight("mid", 0.65, "KnightMid", "MidSword", 22),
                lambda: knight("high", 0.9, "KnightHigh", "HighAxe", 23)],
     "boss": [cyclops_king],
@@ -449,6 +512,67 @@ ROSTER = {
 
 
 # ---------------------------------------------------------------------------
+# Anime ink outlines: an "inverted hull" per piece - a slightly inflated copy with its
+# faces flipped. With back-face culling (Roblox's default) only the rim around the
+# silhouette shows, as a black line.
+OUTLINE_THICKNESS = {"Body": 0.035, "Hair": 0.03, "Hood": 0.03, "Pelt": 0.03, "Beard": 0.025}
+
+
+def outline_material():
+    mat = bpy.data.materials.get("InkOutline")
+    if mat:
+        return mat
+    mat = bpy.data.materials.new("InkOutline")
+    mat.use_nodes = True
+    mat.use_backface_culling = True
+    mat.diffuse_color = (0.02, 0.015, 0.025, 1)
+    nt = mat.node_tree
+    nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial")
+    mix = nt.nodes.new("ShaderNodeMixShader")
+    geo = nt.nodes.new("ShaderNodeNewGeometry")
+    ink = nt.nodes.new("ShaderNodeEmission")
+    ink.inputs["Color"].default_value = (0.02, 0.015, 0.025, 1)
+    clear = nt.nodes.new("ShaderNodeBsdfTransparent")
+    # Ink only for camera rays on front faces; invisible to lights and shadows (preview only -
+    # in Roblox the hull is simply a black part with back-face culling).
+    path = nt.nodes.new("ShaderNodeLightPath")
+    not_cam = nt.nodes.new("ShaderNodeMath")
+    not_cam.operation = "SUBTRACT"
+    not_cam.inputs[0].default_value = 1.0
+    nt.links.new(path.outputs["Is Camera Ray"], not_cam.inputs[1])
+    hide = nt.nodes.new("ShaderNodeMath")
+    hide.operation = "MAXIMUM"
+    nt.links.new(geo.outputs["Backfacing"], hide.inputs[0])
+    nt.links.new(not_cam.outputs["Value"], hide.inputs[1])
+    nt.links.new(hide.outputs["Value"], mix.inputs["Fac"])
+    nt.links.new(ink.outputs["Emission"], mix.inputs[1])
+    nt.links.new(clear.outputs["BSDF"], mix.inputs[2])
+    nt.links.new(mix.outputs["Shader"], out.inputs["Surface"])
+    return mat
+
+
+def make_outline(obj, thickness):
+    part, kind = obj.name.split("_", 1)
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.002)
+    bm.normal_update()
+    for v in bm.verts:
+        v.co += v.normal * thickness
+    bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    for layer in list(bm.loops.layers.uv):
+        bm.loops.layers.uv.remove(layer)
+    me = bpy.data.meshes.new(f"{part}_{kind}Outline")
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(outline_material())
+    o = bpy.data.objects.new(f"{part}_{kind}Outline", me)
+    o.location = obj.location
+    bpy.context.collection.objects.link(o)
+    return o
+
+
 def build_character(ch, atlas_mats):
     """Bake the body, build hair and geometry pieces. Returns all objects (origins at
     the real R15 part centres) for export."""
@@ -494,7 +618,12 @@ def build_character(ch, atlas_mats):
                 continue
             mat = atlas_mats[1] if kind.endswith("Glow") else atlas_mats[0]
             objs.append(piece.to_object(f"{part}_{kind}", mat, centres[part]))
-    return objs
+    outlines = []
+    for o in objs:
+        kind = o.name.split("_", 1)[1]
+        if not kind.endswith("Glow"):
+            outlines.append(make_outline(o, OUTLINE_THICKNESS.get(kind, 0.025)))
+    return objs + outlines
 
 
 def main():

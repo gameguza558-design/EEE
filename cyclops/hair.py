@@ -196,4 +196,32 @@ def beard(seed=4, length=0.55):
     return h.finish()
 
 
-STYLES = {"messy_short": messy_short, "wild_mane": wild_mane, "top_knot": top_knot, "beard": beard}
+def king_mane(seed=5):
+    """Boros-style mane: a huge mass of long hair swept back from a spiky crown and
+    pouring down the back to the waist, with long locks framing the face."""
+    h = HairBuilder(seed)
+    h.cap(front_cut=0.28, back_low=-0.6)
+    rnd = h.rnd
+    # Spiky crown, flaring up and back.
+    for d in around(rnd, 22, (45, 88), (0, 360)):
+        h.clump(d + Vector((0, 0.5, 0.2)), rnd.uniform(0.8, 1.5), rnd.uniform(0.18, 0.26), gravity=0.1, lift=0.7,
+                curl=rnd.uniform(-0.4, 0.4), twist=rnd.uniform(-0.6, 0.6))
+    # The big mass: long locks sweeping back, then falling down the back (to the waist).
+    for lat, length, width in ((35, (2.6, 3.4), (0.3, 0.4)), (15, (2.2, 3.0), (0.28, 0.36)),
+                               (-5, (1.8, 2.6), (0.26, 0.34))):
+        for d in around(rnd, 22, (lat - 10, lat + 10), (40, 320)):
+            out = Vector((d.x * 1.6, d.y, d.z))  # flare outward for volume
+            h.clump(out + Vector((0, 0.9, 0.35)), rnd.uniform(*length), rnd.uniform(*width), gravity=0.75, lift=0.35,
+                    curl=rnd.uniform(-0.25, 0.25), twist=rnd.uniform(-0.5, 0.5), segments=9)
+    # Long locks over the temples, falling in front of the shoulders.
+    for s in (1, -1):
+        for k in range(4):
+            d = Vector((s * (0.85 - 0.08 * k), -0.45 + 0.1 * k, 0.3 + 0.08 * k))
+            h.clump(d, rnd.uniform(1.4, 2.0), 0.2, gravity=0.9, curl=s * 0.35, lift=0.25, segments=8)
+    # A few spiky bangs, kept off the eye.
+    for s in (1, -1):
+        h.clump(Vector((s * 0.55, -0.7, 0.5)), 0.55, 0.15, gravity=0.6, curl=s * 0.9, lift=0.3)
+    return h.finish()
+
+
+STYLES = {"king_mane": king_mane, "messy_short": messy_short, "wild_mane": wild_mane, "top_knot": top_knot, "beard": beard}

@@ -204,7 +204,7 @@ class Painter:
         self.img.paste(Image.new("RGB", self.img.size, (235, 200, 255)), mask=layer)
         self.d = ImageDraw.Draw(self.img)
 
-    def shade(self):
+    def shade(self, ink=True):
         """Ambient-occlusion style darkening toward every face edge, plus soft noise."""
         import numpy as np
         a = np.asarray(self.img, np.float32) / 255
@@ -224,6 +224,11 @@ class Painter:
         a = a * ao[..., None] * (1 + noise[..., None] * 0.1)
         self.img = Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
         self.d = ImageDraw.Draw(self.img)
+        if ink:
+            # Anime ink line along every side's edge (it lands on the rounded bevels).
+            for part in PARTS:
+                for face in FACES:
+                    self.d.rectangle(face_rect(part, face), outline=(26, 20, 30), width=5)
 
     def save(self, path):
         self.img.resize((1024, 1024), Image.LANCZOS).save(path)
@@ -253,8 +258,7 @@ def cyclops_face(p, skin, iris=(230, 170, 60), corruption=0.0):
     p.line(P, "front", [(0.24, 0.435), (0.5, 0.545), (0.76, 0.435)], (25, 18, 20), width=7)
     # Heavy V brow.
     p.poly(P, "front", [(0.12, 0.280), (0.5, 0.440), (0.88, 0.280), (0.88, 0.360), (0.5, 0.500), (0.12, 0.360)], dark)
-    # Lower lid crease and frown lines; no mouth.
-    p.line(P, "front", [(0.32, 0.680), (0.5, 0.710), (0.68, 0.680)], socket, width=5)
+    # Frown lines between the brows; no mouth (and nothing that reads as one).
     p.line(P, "front", [(0.47, 0.500), (0.45, 0.410)], dark, width=4)
     p.line(P, "front", [(0.53, 0.500), (0.55, 0.410)], dark, width=4)
 
