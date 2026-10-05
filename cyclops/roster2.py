@@ -560,26 +560,105 @@ def tower_shield(o):
     blob(s, (0.8, 0, 0.05), (0.1, 0.22, 0.22), "plate_trim")
 
 
+def spline(pts, steps=8):
+    """Catmull-Rom through the control points (smooth flowing lines)."""
+    if len(pts) < 3:
+        return pts
+    ext = [pts[0]] + list(pts) + [pts[-1]]
+    out = []
+    for i in range(1, len(ext) - 2):
+        p0, p1, p2, p3 = ext[i - 1], ext[i], ext[i + 1], ext[i + 2]
+        for s in range(steps):
+            t = s / steps
+            out.append(tuple(0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t * t
+                                    + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t ** 3) for k in range(2)))
+    out.append(pts[-1])
+    return out
+
+
+def glow_lines(p, strokes, color, core, width=9, halo=22):
+    """Smooth glowing lines (a soft halo, a coloured line and a bright core)."""
+    mask = Image.new("L", p.img.size, 0)
+    md = ImageDraw.Draw(mask)
+    paths = [[p.at(part, face, u, v) for u, v in spline(pts)] for part, face, pts in strokes]
+    for path in paths:
+        md.line(path, fill=255, width=width + halo, joint="curve")
+    mask = mask.filter(ImageFilter.GaussianBlur(halo / 2)).point(lambda x: int(x * 0.7))
+    p.img = Image.composite(Image.new("RGB", p.img.size, color), p.img, mask)
+    p.d = ImageDraw.Draw(p.img)
+    for path in paths:
+        p.d.line(path, fill=color, width=width, joint="curve")
+        p.d.line(path, fill=core, width=max(2, width // 3), joint="curve")
+
+
+def mirror(pts):
+    return [(1 - u, v) for u, v in pts]
+
+
+def energy_veins(p, color, core):
+    """Glowing lines that trace the muscles and joints (pecs, abs, obliques, delts,
+    biceps, forearms, quads, calves) instead of random cracks."""
+    S = []
+
+    def both(part, face, pts):
+        S.append((part, face, pts))
+        S.append((part, face, mirror(pts)))
+
+    T = "UpperTorso"
+    both(T, "front", [(0.04, 0.2), (0.1, 0.42), (0.28, 0.49), (0.45, 0.45), (0.5, 0.38)])  # under the pecs
+    both(T, "front", [(0.44, 0.2), (0.32, 0.08), (0.12, 0.02), (0.0, 0.05)])  # chest eye to the shoulders
+    both(T, "front", [(0.33, 0.52), (0.34, 0.75), (0.32, 0.98)])  # sides of the abs
+    both(T, "front", [(0.1, 0.5), (0.16, 0.75), (0.28, 1.0)])  # obliques
+    S.append((T, "front", [(0.5, 0.47), (0.5, 0.75), (0.5, 1.0)]))
+    for v in (0.665, 0.795):
+        S.append((T, "front", [(0.34, v), (0.5, v + 0.015), (0.66, v)]))
+    S.append((T, "back", [(0.5, 0.0), (0.5, 0.5), (0.5, 1.0)]))
+    both(T, "back", [(0.08, 0.12), (0.25, 0.42), (0.47, 0.32)])  # shoulder blades
+    both(T, "back", [(0.15, 0.55), (0.28, 0.78), (0.4, 1.0)])
+    for f in ("left", "right"):
+        S.append((T, f, [(0.5, 0.05), (0.42, 0.55), (0.6, 1.0)]))
+    for side in ("Left", "Right"):
+        for f in SIDES4:
+            S.append((side + "UpperArm", f, [(0.0, 0.4), (0.5, 0.5), (1.0, 0.4)]))  # under the delt
+        S.append((side + "UpperArm", "front", [(0.5, 0.5), (0.45, 0.75), (0.5, 1.0)]))  # biceps split
+        S.append((side + "UpperArm", "back", [(0.25, 0.5), (0.5, 0.82), (0.75, 0.5)]))  # triceps horseshoe
+        for f in ("left", "right"):
+            S.append((side + "UpperArm", f, [(0.5, 0.5), (0.55, 1.0)]))
+        S.append((side + "LowerArm", "front", [(0.5, 0.0), (0.33, 0.45), (0.5, 1.0)]))
+        S.append((side + "LowerArm", "back", [(0.5, 0.0), (0.66, 0.5), (0.5, 1.0)]))
+        for f in ("left", "right"):
+            S.append((side + "LowerArm", f, [(0.4, 0.0), (0.6, 1.0)]))
+        S.append((side + "Hand", "front", [(0.5, 0.0), (0.5, 0.6)]))
+        S.append((side + "UpperLeg", "front", [(0.15, 0.0), (0.33, 0.55), (0.55, 0.96)]))  # quads teardrop
+        S.append((side + "UpperLeg", "front", [(0.85, 0.0), (0.76, 0.6), (0.58, 0.96)]))
+        S.append((side + "UpperLeg", "back", [(0.5, 0.0), (0.5, 1.0)]))
+        for f in ("left", "right"):
+            S.append((side + "UpperLeg", f, [(0.5, 0.0), (0.45, 1.0)]))
+        S.append((side + "LowerLeg", "front", [(0.5, 0.0), (0.44, 1.0)]))
+        S.append((side + "LowerLeg", "back", [(0.15, 0.0), (0.35, 0.5), (0.5, 0.78), (0.65, 0.5), (0.85, 0.0)]))
+        for f in ("left", "right"):
+            S.append((side + "LowerLeg", f, [(0.5, 0.0), (0.5, 1.0)]))
+    both("Head", "front", [(0.2, 0.56), (0.24, 0.8), (0.34, 1.0)])
+    S.append(("Head", "back", [(0.5, 0.0), (0.5, 1.0)]))
+    glow_lines(p, S, color, core)
+
+
 def cyclops_prince():
     """Sub-boss: the Cyclops Prince, the most corrupted of them all. The King's son - his
-    pink mane, but swept back and long; black-violet skin split by glowing violet cracks,
-    an eye on the chest, a crown with a young horn, crystal-overgrown half-armour, a
-    royal cape and a pair of moon blades (or the moon spear)."""
+    pink mane, but swept back and long; black-violet skin traced with glowing violet lines
+    that follow his muscles and joints, an eye on the chest, a crown with a young horn,
+    crystal-overgrown half-armour, a royal cape and a pair of moon blades (or the moon
+    spear)."""
     ch = Character("CyclopsPrince", glow=PRINCE_GLOW, weapon="MoonBlade")
     ch.sculpt = prince_bumps()
     skin = (40, 26, 52)
     p = Painter(seed=71)
     skin_all(p, skin)
     muscles(p, skin)
-    for part in style2.PARTS:
-        for f in FACES:
-            if f == "front" and part == "Head":
-                continue
-            p.cracks(part, f, (12, 6, 18), PRINCE_GLOW, count=7, seed=hash((part, f, 7)) % 997)
-    p.cracks("Head", "front", (12, 6, 18), PRINCE_GLOW, count=2, seed=5)
     king_face(p, skin)
-    pants(p, (22, 16, 30), belt=(30, 22, 40), buckle=(220, 180, 70))
-    boots(p, (18, 14, 24), height=0.62, cuff=(200, 160, 70), plates=(70, 40, 90))
+    p.fill("LowerTorso", FACES, (20, 14, 28))
+    boots(p, (18, 14, 24), height=0.25, cuff=(200, 160, 70))
+    energy_veins(p, PRINCE_GLOW, (245, 215, 255))
     for side in ("Left", "Right"):
         for f in SIDES4:
             p.box(side + "UpperArm", f, 0, 0.6, 1, 0.7, (220, 180, 70))  # gold arm bands
@@ -610,10 +689,10 @@ def cyclops_prince():
     t.shell([(0.7, 0.62, 0.5, 0.16), (0.9, 0.55, 0.45, 0.14)], "gold_engraved")
     la = o("LeftUpperArm")
     la.shell([(0.2, 0.82, 0.76, 0.24, 0.12, 0), (0.6, 0.76, 0.7, 0.24, 0.06, 0), (0.88, 0.42, 0.44, 0.16, 0, 0)],
-             "plate_corrupt_heavy")
+             "plate_black")
     band(la, 0.1, 0.24, 0.85, 0.79, 0.25, "gold_engraved", dx=0.12)
     for i in range(3):
-        la.box((0.5, 1.4 - 0.1 * i, 0.3), "plate_corrupt_heavy", pos=(0.64 + 0.05 * i, 0, 0.42 - 0.22 * i), rot=(0, 30, 0),
+        la.box((0.5, 1.4 - 0.1 * i, 0.3), "plate_black", pos=(0.64 + 0.05 * i, 0, 0.42 - 0.22 * i), rot=(0, 30, 0),
                bottom=(1, 0.9))
     for k in range(3):
         la.spike((0.5 + 0.12 * k, -0.25 + 0.25 * k, 0.85), (0.5, 0, 1), 0.5, 0.08, "gold", sides=4)
@@ -634,11 +713,11 @@ def cyclops_prince():
     # Navy-and-gold bracers and greaves, a gold belt with a gem.
     for side, sx in (("Left", 1), ("Right", -1)):
         la_ = o(side + "LowerArm")
-        la_.shell([(-0.45, 0.58, 0.58, 0.15), (0.35, 0.62, 0.62, 0.16)], "plate_corrupt_heavy")
+        la_.shell([(-0.45, 0.58, 0.58, 0.15), (0.35, 0.62, 0.62, 0.16)], "plate_black")
         band(la_, 0.3, 0.42, 0.65, 0.65, 0.17, "gold")
         la_.spike((sx * 0.6, 0, 0.0), (sx, 0, 0.6), 0.35, 0.08, "gold", sides=4)
         ll = o(side + "LowerLeg")
-        ll.shell([(-0.1, 0.58, 0.58, 0.15), (0.48, 0.61, 0.61, 0.16)], "plate_corrupt_heavy")
+        ll.shell([(-0.1, 0.58, 0.58, 0.15), (0.48, 0.61, 0.61, 0.16)], "plate_black")
         band(ll, 0.44, 0.58, 0.64, 0.64, 0.17, "gold_engraved")
         ll.spike((0, -0.62, 0.5), (0, -1, 0.15), 0.3, 0.16, "gold", sides=4)
     lt = o("LowerTorso")
@@ -729,6 +808,19 @@ def paladin():
     ch.painter = armored_painter(65, (126, 132, 130), (230, 226, 220))
     ch.outfit = parade.parade_knight(ch.name, "paladin", seed=65)
     return ch
+
+
+def dragon_knight():
+    """Miniboss: the Cyclops Dragon Knight. Black dragoon plate traced in silver, curved
+    blades sweeping back from the helm, shoulders, elbows, knees and back like a dragon's
+    wings, a crimson-violet aura and a long winged lance."""
+    ch = Character("CyclopsDragonKnight", glow=DRAGON_GLOW, weapon="DragonLance")
+    ch.painter = armored_painter(91, (110, 100, 118), (30, 26, 36), iris=(255, 60, 120))
+    ch.outfit = parade.parade_knight(ch.name, "dragoon", glow=DRAGON_GLOW, seed=91)
+    return ch
+
+
+DRAGON_GLOW = (255, 50, 110)
 
 
 # ---------------------------------------------------------------------------
@@ -958,6 +1050,7 @@ ROSTER = {
     "court": [white_knight, black_knight, royal_guard, paladin, general],
     "army": [spearman, lambda: spearman(True), wolf_handler, wolf_knight],
     "elite": [villager_blighted, woodcutter_blighted, knight_blighted, lambda: knight_blighted(True)],
+    "miniboss": [dragon_knight],
     "boss": [cyclops_prince, cyclops_king, lambda: cyclops_king(sculpted=True)],
 }
 
@@ -1314,7 +1407,7 @@ def preview_user_hair(head):
     return hair_obj
 
 
-SPACING = {"court": 6.4, "elite": 6.0, "boss": 6.0}
+SPACING = {"court": 6.4, "elite": 6.0, "boss": 6.0, "miniboss": 7.0}
 
 
 def pose_weapons(ch, objs, mats, k):
@@ -1344,7 +1437,7 @@ def pose_weapons(ch, objs, mats, k):
 def render_lineups(built, weapon_objs, mats):
     scene, cam = build_all.setup_scene()
     scene.view_settings.view_transform = "Standard"
-    scales = {"CyclopsKing": 1.6, "CyclopsKing3D": 1.6, "CyclopsPrince": 1.3}
+    scales = {"CyclopsKing": 1.6, "CyclopsKing3D": 1.6, "CyclopsPrince": 1.3, "CyclopsDragonKnight": 1.2}
     for group, members in built.items():
         shown, x = [], 0.0
         for ch, objs in members:
@@ -1360,7 +1453,7 @@ def render_lineups(built, weapon_objs, mats):
         top = max(6.8 * max(scales.get(c.name, 1.0) for c, _ in members),
                   max((o.matrix_world @ Vector(c)).z for o in shown for c in o.bound_box) + 0.4)
         center = (x / 2, 0, top / 2 - 0.2)
-        if group == "boss":
+        if group in ("boss", "miniboss"):
             # One close-up per King; the buyer's own hair is shown here as a preview only.
             for ch, objs in members:
                 head = next(o for o in objs if o.name.endswith("Head_Body"))

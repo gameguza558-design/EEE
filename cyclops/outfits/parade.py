@@ -105,6 +105,9 @@ STYLES = {
     "guard": dict(plate="blade", plate2="plate_white", trim="gold", trim2="gold_engraved", knee="blade",
                   cape="cloth_royal", lining="cloth_white", tabard="cloth_royal", helm="plume", chest="cross",
                   gem="gem", pauldron="round", crystals=4, spikes=False),
+    "dragoon": dict(plate="plate_black", plate2="plate_dark", trim="blade", trim2="blade", knee="plate_black",
+                    cape=None, lining=None, tabard=None, helm="dragon", chest="muscle", gem="gem",
+                    pauldron="dragon", crystals=4, spikes=True),
     "paladin": dict(plate="plate_white", plate2="plate_corrupt_heavy", trim="gold_engraved", trim2="gold",
                     knee="plate_white", cape="cloth_white", lining="cloth_royal", tabard="cloth_white",
                     helm="halo", chest="eye", gem="gem", pauldron="round", crystals=8, spikes=False),
@@ -116,13 +119,55 @@ def parade_knight(name, style, glow=(176, 70, 255), seed=40):
     o = Outfit(name, glow=glow, corruption=0.4, seed=seed)
     helm(o, S)
     torso(o, S)
-    cape(o, S)
+    if S["cape"]:
+        cape(o, S)
     hips(o, S)
     for part, side in (("Left", 1), ("Right", -1)):
         arm(o, part, side, S)
         leg(o, part, side, S)
+    if style == "dragoon":
+        dragoon_fins(o, S)
     crystals(o, S, random.Random(seed))
     return o
+
+
+def sweep(piece, base, d0, length, width, bend, color, edge=None, up=(0, 0, 1), flip=False):
+    """A curved blade fin growing from base along d0, bending in the plane of d0 and `up`."""
+    import weapons
+    n = Vector(d0).cross(Vector(up))
+    if n.length < 1e-3:
+        n = Vector((1, 0, 0))
+    n.normalize()
+    if flip:
+        n = -n
+    weapons.sickle_blade(piece, base, d0, n, length, width, bend, color, thick=0.06, edge=edge)
+
+
+def dragoon_fins(o, S):
+    """Dragoon silhouette: curved blades sweeping back from elbows, forearms, knees, hips,
+    heels and a pair of wing-like blades from the shoulder blades."""
+    P, T = S["plate"], S["trim"]
+    t, g = o("UpperTorso"), o("UpperTorso", "Glow")
+    for s in (1, -1):
+        # Silver filigree swirling over the chest, and the dragon's glowing veins.
+        pipe(t, [(s * 0.15, -0.8, 0.62), (s * 0.45, -0.82, 0.78), (s * 0.78, -0.7, 0.6), (s * 0.95, -0.55, 0.2),
+                 (s * 0.8, -0.65, -0.2), (s * 0.95, -0.55, -0.6)], T, w=0.06)
+        pipe(g, [(s * 0.68, -0.72, 0.05), (s * 0.55, -0.72, -0.35), (s * 0.4, -0.7, -0.78)], "glow", w=0.05, t=0.03)
+        pipe(g, [(s * 0.3, -0.83, 0.68), (s * 0.12, -0.82, 0.55)], "glow", w=0.05, t=0.03)
+    for part, side in (("Left", 1), ("Right", -1)):
+        pipe(o(part + "UpperArm", "Glow"), [(side * 0.86, -0.4, 0.3), (side * 0.95, 0.0, 0.25), (side * 0.86, 0.4, 0.3)],
+             "glow", w=0.05, t=0.03)
+        pipe(o(part + "LowerLeg", "Glow"), [(0, -0.75, 0.25), (0, -0.72, -0.5)], "glow", w=0.05, t=0.03)
+    for s in (1, -1):
+        sweep(t, (s * 0.45, 0.7, 0.6), (s * 0.5, 1, 0.9), 2.2, 0.7, 60, P, edge=T, flip=s < 0)  # back wings
+        sweep(t, (s * 0.55, 0.7, 0.2), (s * 0.7, 1, 0.3), 1.5, 0.5, 50, P, edge=T, flip=s < 0)
+    for part, side in (("Left", 1), ("Right", -1)):
+        la, ll, lt, ft = o(part + "LowerArm"), o(part + "LowerLeg"), o("LowerTorso"), o(part + "Foot")
+        sweep(la, (0, 0.6, 0.45), (side * 0.2, 1, 0.3), 1.1, 0.4, -50, P, edge=T)  # elbow blade
+        sweep(la, (side * 0.6, 0.1, -0.1), (side * 0.6, 0.6, -1), 1.0, 0.34, 40, P, edge=T, up=(0, 1, 0))  # forearm
+        sweep(ll, (0, -0.7, 0.55), (0, -0.4, 1), 0.95, 0.36, 60, P, edge=T, up=(0, -1, 0))  # knee horn
+        sweep(lt, (side * 1.15, 0.2, -0.3), (side * 0.6, 0.7, -1), 1.3, 0.45, -45, P, edge=T, up=(0, 1, 0))  # hip
+        sweep(ft, (0, 0.55, 0.0), (0, 1, -0.2), 0.65, 0.26, 40, P, edge=T)  # heel spur
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +206,13 @@ def helm(o, S):
                 fin(h, (s * 0.66, -0.05 + 0.22 * k, 0.52 - 0.1 * k), (s * 0.35, 1, 0.5 - 0.12 * k),
                     1.1 - 0.2 * k, 0.04, 0.05, T, roll=90)
         fin(h, (0, -0.3, 0.8), (0, 0.6, 1), 0.9, 0.05, 0.16, P)  # centre crest blade
+    elif kind == "dragon":
+        for side in (1, -1):
+            for k in range(3):  # curved horns sweeping back from the temples
+                sweep(h, (side * 0.62, -0.1 + 0.25 * k, 0.45 - 0.1 * k), (side * 0.3, 1, 0.6 - 0.15 * k),
+                      1.9 - 0.4 * k, 0.42 - 0.07 * k, 55, P, edge=T, flip=side < 0)
+            sweep(h, (side * 0.45, -0.75, -0.2), (side * 0.6, -0.6, -0.3), 0.6, 0.22, -60, P, edge=T)  # jaw fangs
+        sweep(h, (0, -0.55, 0.75), (0, 0.4, 1), 1.7, 0.45, -70, P, edge=T, up=(1, 0, 0))  # crest
     elif kind == "halo":
         h.spike((0, -0.15, 0.75), (0, 0.15, 1), 1.3, 0.16, "horn", sides=6)
         for k in range(20):  # gold halo
@@ -287,16 +339,24 @@ def hips(o, S):
 def arm(o, part, side, S):
     P, P2, T = S["plate"], S["plate2"], S["trim"]
     ua, la, hand = o(part + "UpperArm"), o(part + "LowerArm"), o(part + "Hand")
-    # Pauldron: a big rounded dome over three flaring lames, every edge piped in gold.
-    rshell(ua, [(0.18, 0.86, 0.8, {"dx": side * 0.14}), (0.6, 0.8, 0.74, {"dx": side * 0.08}),
-                (0.92, 0.46, 0.48)], P, tip=(side * 0.02, 0, 1.02))
-    trim(ua, 0.2, 0.88, 0.82, T, dx=side * 0.14)
-    for i in range(3):
+    # Pauldron: a big rounded dome over flaring lames, every edge piped in gold. The
+    # dragoon's is slimmer, with a single lame - his blades make the silhouette.
+    k = 0.84 if S["pauldron"] == "dragon" else 1.0
+    lames = 1 if S["pauldron"] == "dragon" else 3
+    rshell(ua, [(0.18, 0.86 * k, 0.8 * k, {"dx": side * 0.14}), (0.6, 0.8 * k, 0.74 * k, {"dx": side * 0.08}),
+                (0.92, 0.46 * k, 0.48 * k)], P, tip=(side * 0.02, 0, 1.02))
+    trim(ua, 0.2, 0.88 * k, 0.82 * k, T, dx=side * 0.14)
+    for i in range(lames):
         z = 0.12 - 0.2 * i
-        rshell(ua, [(z - 0.2, 0.9 + 0.05 * i, 0.82 + 0.03 * i, {"dx": side * (0.2 + 0.05 * i)}),
-                    (z, 0.86 + 0.05 * i, 0.8 + 0.03 * i, {"dx": side * (0.16 + 0.05 * i)})], P2 if i % 2 else P)
-        trim(ua, z - 0.2, 0.92 + 0.05 * i, 0.84 + 0.03 * i, T, h=0.05, dx=side * (0.2 + 0.05 * i))
-    if S["pauldron"] == "bladed":
+        rshell(ua, [(z - 0.2, (0.9 + 0.05 * i) * k, (0.82 + 0.03 * i) * k, {"dx": side * (0.2 + 0.05 * i)}),
+                    (z, (0.86 + 0.05 * i) * k, (0.8 + 0.03 * i) * k, {"dx": side * (0.16 + 0.05 * i)})],
+               P2 if i % 2 else P)
+        trim(ua, z - 0.2, (0.92 + 0.05 * i) * k, (0.84 + 0.03 * i) * k, T, h=0.05, dx=side * (0.2 + 0.05 * i))
+    if S["pauldron"] == "dragon":
+        for k in range(3):
+            sweep(ua, (side * (0.35 + 0.2 * k), -0.4 + 0.4 * k, 0.85 - 0.1 * k), (side * 0.6, 0.4, 1),
+                  1.4 - 0.25 * k, 0.45, 55, P, edge=T, flip=side < 0)
+    elif S["pauldron"] == "bladed":
         for k in range(3):
             fin(ua, (side * (0.35 + 0.18 * k), -0.35 + 0.35 * k, 0.88 - 0.08 * k), (side * 0.55, 0.3, 1),
                 0.9 - 0.15 * k, 0.16, 0.04, P, roll=90)

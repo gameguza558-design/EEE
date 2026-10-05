@@ -10,6 +10,7 @@ build ด้วย `python3 cyclops/roster2.py` (ไฟล์อยู่ที�
 ![court](renders/r15_court_front.png)
 ![army](renders/r15_army_front.png)
 ![elite](renders/r15_elite_front.png)
+![miniboss](renders/r15_miniboss_front.png)
 ![prince](renders/r15_CyclopsPrince_hero.png)
 ![boss](renders/r15_CyclopsKing_hero.png)
 ![boss3d](renders/r15_CyclopsKing3D_hero.png)
@@ -34,7 +35,7 @@ build ด้วย `python3 cyclops/roster2.py` (ไฟล์อยู่ที�
 | กองทัพ | `Spearman` พลหอก | `Spear` |
 | กองทัพ | `SpearmanShield` พลหอกโล่ | `Spear` + `CyclopsShield = true` (โล่ทาวเวอร์) |
 | ราชสำนัก | `KnightWhite` อัศวินขาว (เกราะขาวขัดเงาเส้นทอง หมวกปีก ทับทิมฟ้าที่อก ผ้าคลุมแดง) | `RadiantGreatsword` (ดาบยาวเท่าตัว) + `CyclopsShield = true` |
-| ราชสำนัก | `KnightBlack` อัศวินดำ (แนว Momon: เกราะดำลายกล้ามเส้นทอง สนับเข่าทอง ผ้าคลุมแดง) | `AbyssGreatsword` (ดาบยาวสองเล่ม ถือคู่) |
+| ราชสำนัก | `KnightBlack` อัศวินดำ (แนว Momon: เกราะดำลายกล้ามเส้นทอง สนับเข่าทอง ผ้าคลุมแดง) | `AbyssGreatsword` (ดาบยาวสองเล่ม ปลายเป็นหัวขวาน ถือคู่) |
 | ราชสำนัก | `KnightRoyalGuard` ราชองครักษ์ | `RoyalHalberd` (ง้าวสูงท่วมหัว) |
 | ราชสำนัก | `KnightPaladin` อัศวินแห่งดวงตา (วงรัศมี) | `EyeWarhammer` (ค้อนยักษ์สองมือ) |
 | Elite ชาวบ้าน | `VillagerBlighted` ชาวนาติดเชื้อหนัก | `BlightScythe` |
@@ -42,7 +43,8 @@ build ด้วย `python3 cyclops/roster2.py` (ไฟล์อยู่ที�
 | Elite อัศวิน | `KnightBlighted` อัศวินติดเชื้อหนัก | `BlightGreatsword` |
 | Elite อัศวิน | `KnightBlightedAxe` อัศวินติดเชื้อหนัก (ขวาน) | `CrystalWarAxe` |
 | ราชสำนัก | `General` นายพล | `DragonSlayer` (ดาบมหึมา) |
-| รองบอส | `CyclopsPrince` เจ้าชายไซคลอปส์ (ติดเชื้อหนักสุด ผิวดำม่วง รอยร้าวม่วงเรือง ตาที่อก มงกุฎ) | `MoonBlade` (ถือคู่) หรือ `MoonSpear` |
+| มินิบอส | `CyclopsDragonKnight` อัศวินมังกรไซคลอปส์ (เกราะดำครีบใบมีดโค้งแบบ Dragoon เส้นเรืองแดง) | `DragonLance` |
+| รองบอส | `CyclopsPrince` เจ้าชายไซคลอปส์ (ติดเชื้อหนักสุด ผิวดำม่วง เส้นเรืองแสงตามกล้ามเนื้อและข้อต่อ ตาที่อก มงกุฎ) | `MoonBlade` (ถือคู่) หรือ `MoonSpear` |
 | บอส | `CyclopsKing` ราชา (กล้ามวาด) | มือเปล่า |
 | บอส | `CyclopsKing3D` ราชา (ซิกแพ็กและอกนูนเป็น 3D จริง) | มือเปล่า |
 

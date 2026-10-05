@@ -18,12 +18,12 @@
 	          KnightApprenticeInfected, KnightMid, KnightHigh, WolfKnight, Spearman, SpearmanShield,
 	          KnightWhite, KnightBlack, KnightRoyalGuard, KnightPaladin, General,
 	          VillagerBlighted, WoodcutterBlighted, KnightBlighted, KnightBlightedAxe (infected elites),
-	          CyclopsPrince (sub-boss), CyclopsKing, CyclopsKing3D
+	          CyclopsDragonKnight (miniboss), CyclopsPrince (sub-boss), CyclopsKing, CyclopsKing3D
 	Weapons:  Pitchfork, Hoe, Spade, Sickle, Scythe, HunterBow, WoodcutterAxe, WolfRiderSpear,
 	          OneHornGreatsword, ApprenticeAxe, ApprenticeSword, MidAxe, MidSword, HighAxe, HighSword,
 	          Spear, DragonSlayer, RadiantGreatsword, AbyssGreatsword (dual: one in each hand),
 	          RoyalHalberd, EyeWarhammer, MoonBlade (dual), MoonSpear,
-	          BlightScythe, CrystalMaul, BlightGreatsword, CrystalWarAxe,
+	          BlightScythe, CrystalMaul, BlightGreatsword, CrystalWarAxe, DragonLance,
 	          SerratedSpear, SerratedSword, SerratedCleaver   (saw-toothed: apply Bleeding)
 ]]
 

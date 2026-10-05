@@ -433,6 +433,7 @@ def wing_guard(p, z, span, color="gold_engraved", feathers=4, up=0.8):
 
 
 PURPLE_HOT = (200, 80, 255)
+DRAGON_GLOW = (255, 50, 110)
 
 
 def arc_boxes(p, center, radius, a0, a1, n, size, color, axis="y"):
@@ -486,7 +487,7 @@ def radiant_greatsword():
 
 def abyss_greatsword():
     """Black Knight: one of a pair of enormous straight greatswords (as long as he is
-    tall) with an open slot down the blade, a hooked tip and silver curved quillons.
+    tall) with an open slot down the blade, an axe-head tip and silver curved quillons.
     Wielded one in each hand."""
     w = Weapon("AbyssGreatsword", damage=36, cooldown=0.9, glow=EMBER)
     w.dual = True
@@ -497,8 +498,14 @@ def abyss_greatsword():
         rail = [(s * 0.17, 0.07), (s * 0.17, -0.07), (s * 0.46, 0.0)]
         b.loft([(1.7, rail), (6.4, [(x * 0.96, y) for x, y in rail])], "blade_dark")
         b.box((0.03, 0.05, 4.7), "blade", pos=(s * 0.45, 0, 4.05))  # bright cutting edge
-    b.loft([(6.4, diamond(0.44, 0.08)), (6.9, diamond(0.42, 0.075))], "blade_dark", tip=(-0.15, 0, 7.75))
-    arc_boxes(b, (0.2, 7.0), 0.3, -10, 150, 6, (0.12, 0.13), "blade_dark")  # hooked tip
+    b.loft([(6.4, diamond(0.44, 0.08)), (6.9, diamond(0.42, 0.075))], "blade_dark")
+    # The tip ends in an axe head: a broad blade flaring to one side with a hooked beard.
+    head = [(-0.42, 6.85), (0.42, 6.85), (0.6, 7.0), (0.98, 7.3), (0.92, 7.8), (0.4, 8.0), (-0.22, 7.82), (-0.42, 7.35)]
+    b.loft([(-0.07, head), (0.07, head)], "blade_dark", rot=(90, 0, 0))
+    edge = [(0.9, 7.25), (1.06, 7.32), (1.0, 7.86), (0.86, 7.82)]
+    b.loft([(-0.035, edge), (0.035, edge)], "blade", rot=(90, 0, 0))  # bright cutting edge
+    b.spike((0.92, 0, 7.3), (0.4, 0, -1), 0.4, 0.06, "blade_dark", sides=4)  # beard hook
+    b.spike((-0.3, 0, 7.75), (-0.3, 0, 1), 0.35, 0.06, "blade_dark", sides=4)
     g.box((0.05, 0.05, 4.6), "glow", pos=(0, 0, 4.05))  # ember core glowing in the slot
     b.box((0.94, 0.2, 0.08), "gold", pos=(0, 0, 1.0))
     gd = w("Guard")
@@ -709,6 +716,68 @@ def crystal_war_axe():
     return w
 
 
+def sickle_blade(p, base, d0, n, length, width, bend, color, thick=0.05, segs=10, edge=None):
+    """A curved, single-edged blade (dragoon fins, lance wings) built as one continuous
+    surface: a spine bending by `bend` degrees around the axis n, the blade widening out
+    to one side and tapering to a point. edge (a tile) adds a bright outer cutting edge."""
+    from mathutils import Matrix, Vector
+    d, n = Vector(d0).normalized(), Vector(n).normalized()
+    pos = Vector(base)
+    spine, perps, widths = [], [], []
+    seg = length / segs
+    for k in range(segs + 1):
+        t = k / segs
+        spine.append(pos.copy())
+        perps.append(n.cross(d).normalized())
+        widths.append(width * math.sin(math.pi * min(1.0, 0.15 + t * 0.95)) ** 0.7 * (1 - t) ** 0.35 + 0.0)
+        pos = pos + d * seg
+        d = Matrix.Rotation(math.radians(bend / segs), 3, n) @ d
+
+    def strip(w0, w1, tile, th):
+        verts, faces = [], []
+        for c, pp, wd in zip(spine, perps, widths):
+            for off in (w0(wd), w1(wd)):
+                for s in (1, -1):
+                    verts.append(tuple(c + pp * off + n * s * th / 2))
+        m = len(spine)
+        for i in range(m - 1):
+            a, b = 4 * i, 4 * (i + 1)
+            faces.append((a, a + 2, b + 2, b))  # front face (+n)
+            faces.append((a + 1, b + 1, b + 3, a + 3))  # back face
+            faces.append((a + 2, a + 3, b + 3, b + 2))  # outer edge
+            faces.append((a, b, b + 1, a + 1))  # inner edge
+        faces.append((0, 1, 3, 2))
+        last = 4 * (m - 1)
+        faces.append((last, last + 2, last + 3, last + 1))
+        p._faces(verts, faces, tile)
+
+    strip(lambda wd: 0.0, lambda wd: wd, color, thick)
+    if edge:
+        strip(lambda wd: wd - 0.005, lambda wd: wd + 0.05 * min(1.0, wd / max(widths) * 3), edge, thick * 0.7)
+
+
+def dragon_lance():
+    """The Dragon Knight's lance: a long dark lance with a great leaf blade swept by
+    curved wings, a crescent blade at the butt and a red cord."""
+    w = Weapon("DragonLance", damage=38, cooldown=0.85, two_handed=True, glow=DRAGON_GLOW)
+    haft(w, -2.6, 5.4, 0.08, color="plate_black", rings=(-2.5, -0.6, 1.4, 5.2), ring_color="blade")
+    h, g = w("Head"), w("Glow")
+    tube(h, 5.3, 5.8, 0.13, 0.11, "plate_black", sides=8)
+    h.loft([(5.8, diamond(0.14, 0.07)), (6.3, diamond(0.34, 0.07)), (7.4, diamond(0.18, 0.05))], "blade_dark",
+           tip=(0, 0, 8.5))
+    g.box((0.04, 0.08, 2.0), "glow", pos=(0, 0, 6.9), top=(0.3, 1))
+    for s in (1, -1):  # swept wings at the base of the head
+        sickle_blade(h, (s * 0.12, 0, 5.6), (s * 1, 0, 0.35), (0, -s, 0), 1.4, 0.5, 70, "plate_black", edge="blade")
+        sickle_blade(h, (s * 0.12, 0, 6.0), (s * 1, 0, 0.9), (0, -s, 0), 0.9, 0.3, 50, "plate_black", edge="blade")
+        g.box((0.03, 0.06, 0.6), "glow", pos=(s * 0.45, 0, 5.85), rot=(0, s * -60, 0))
+    # Crescent blade at the butt, sweeping one way.
+    sickle_blade(h, (0.05, 0, -2.4), (1, 0, -0.6), (0, -1, 0), 1.8, 0.6, -110, "plate_black", edge="blade")
+    h.spike((0, 0, -2.6), (0, 0, -1), 0.6, 0.08, "blade_dark", sides=4)
+    for k in range(4):  # red cord hanging below the head
+        h.spike((0.08, 0, 5.2 - 0.5 * k), (0.3, 0.2, -1), 0.55, 0.035, "cloth_royal", sides=4)
+    return w
+
+
 def all_weapons():
     return ([pitchfork(), hoe(), spade(), sickle(), scythe(), hunter_bow(), woodcutter_axe(), wolf_rider_spear(), onehorn_greatsword()]
             + [tier_axe(t) for t in ("Apprentice", "Mid", "High")]
@@ -716,4 +785,4 @@ def all_weapons():
             + [spear(), dragon_slayer(), serrated_spear(), serrated_sword(), serrated_cleaver()]
             + [radiant_greatsword(), abyss_greatsword(), royal_halberd(), eye_warhammer(), moon_blade(),
                moon_spear()]
-            + [blight_scythe(), crystal_maul(), blight_greatsword(), crystal_war_axe()])
+            + [blight_scythe(), crystal_maul(), blight_greatsword(), crystal_war_axe(), dragon_lance()])
