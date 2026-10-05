@@ -57,7 +57,36 @@ def load_reference():
         o.name = o.data.name = name
         o.data.uv_layers.active.name = "UVMap"
     assert len(parts) == 15, sorted(parts)
+    strip_face_features(parts["Head"])
     return parts
+
+
+def strip_face_features(head):
+    """The Studio head carries the classic Roblox eyes and smile as small raised meshes
+    on its front. Cyclopes have one painted eye and no mouth, so remove those islands."""
+    bm = bmesh.new()
+    bm.from_mesh(head.data)
+    seen, doomed = set(), []
+    for v in bm.verts:
+        if v in seen:
+            continue
+        island, stack = [], [v]
+        seen.add(v)
+        while stack:
+            x = stack.pop()
+            island.append(x)
+            for e in x.link_edges:
+                o = e.other_vert(x)
+                if o not in seen:
+                    seen.add(o)
+                    stack.append(o)
+        dims = [max(getattr(q.co, a) for q in island) - min(getattr(q.co, a) for q in island) for a in "xyz"]
+        cy = sum(q.co.y for q in island) / len(island)
+        if max(dims) < 0.5 and cy < -0.4:  # small and on the face (front is -Y)
+            doomed += island
+    bmesh.ops.delete(bm, geom=doomed, context="VERTS")
+    bm.to_mesh(head.data)
+    bm.free()
 
 
 def identify(c, size):
