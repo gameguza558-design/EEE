@@ -24,7 +24,7 @@ TILES = [
     "pants", "shield", "fur_dark", "rope", "plate_corrupt_heavy", "bone",
     # Luxury knights and the Prince.
     "plate_white", "plate_black", "plate_navy", "cloth_royal", "cloth_white", "blade_dark",
-    "gem", "gold_engraved",
+    "gem", "gold_engraved", "gem_blue",
 ]
 
 PURPLE = np.array([0.72, 0.30, 1.0])
@@ -195,11 +195,19 @@ def gem(rng, color=(0.85, 0.08, 0.16)):
     return np.clip(t, 0, 1).astype(np.float32)
 
 
-def royal_cloth(rng, color, hem=(0.85, 0.66, 0.26)):
-    t = cloth(rng, color)
-    t = shade(t, 0.06 * np.sin(XX / TS * math.pi * 6))  # velvet folds
-    m = ((YY > TS * 0.86) & (YY < TS * 0.92)).astype(np.float32)[..., None]
-    return t * (1 - m) + np.array(hem, np.float32) * m
+def royal_cloth(rng, color):
+    """Rich velvet (the gold hem is geometry, so the cloth tiles seamlessly)."""
+    t = solid(color)
+    t = shade(t, 0.05 * np.sin(XX / TS * math.pi * 4))  # soft folds
+    t = shade(t, fbm(rng, ((8, 0.5), (64, 0.5)), aspect=(1, 6)) * 0.08)
+    return shade(t, fbm(rng) * 0.06)
+
+
+def polished(rng, color):
+    """Smooth polished parade plate: no seams or rivets (shape comes from the geometry)."""
+    t = solid(color)
+    t = shade(t, fbm(rng) * 0.05)
+    return shade(t, fbm(rng, ((24, 0.5), (48, 0.5))) * 0.02)
 
 
 def leather(rng, color, stitch=True):
@@ -408,14 +416,15 @@ def build_atlas(path, seed=3):
         "rope": rope(rng),
         "shield": shield(rng),
         "bone": grime(shade(solid((0.78, 0.74, 0.64)), fbm(rng) * 0.15), rng, 0.4),
-        "plate_white": ornate_plate(rng, (0.78, 0.8, 0.86)),
-        "plate_black": ornate_plate(rng, (0.07, 0.065, 0.08), shine=0.12),
+        "plate_white": polished(rng, (0.8, 0.82, 0.88)),
+        "plate_black": polished(rng, (0.09, 0.1, 0.14)),
         "plate_navy": ornate_plate(rng, (0.1, 0.13, 0.26), trim=(0.3, 0.85, 0.95), shine=0.14),
         "cloth_royal": royal_cloth(rng, (0.52, 0.04, 0.08)),
         "cloth_white": royal_cloth(rng, (0.82, 0.8, 0.78)),
         "blade_dark": shade(blade(rng), -0.5 * np.clip(np.minimum(XX, TS - 1 - XX) / (TS * 0.14), 0, 1)),
         "gem": gem(rng),
         "gold_engraved": engraved_gold(rng),
+        "gem_blue": gem(rng, (0.1, 0.35, 0.95)),
     }
     assert set(tiles) == set(TILES), set(TILES) ^ set(tiles)
     atlas = np.zeros((ATLAS, ATLAS, 3), np.float32)

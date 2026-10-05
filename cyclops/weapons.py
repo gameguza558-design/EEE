@@ -432,144 +432,280 @@ def wing_guard(p, z, span, color="gold_engraved", feathers=4, up=0.8):
             p.spike(base, (s * (1 - 0.35 * t), 0, up * (0.25 + 0.6 * t)), span * (1 - 0.25 * t), 0.09, color, sides=4)
 
 
+PURPLE_HOT = (200, 80, 255)
+
+
+def arc_boxes(p, center, radius, a0, a1, n, size, color, axis="y"):
+    """Boxes along an arc in the XZ plane (hooks, crescents, guards). Angles in degrees,
+    0 = +X, 90 = +Z. size = (thickness across the arc, depth in Y)."""
+    cx, cz = center
+    pts = [(cx + radius * math.cos(math.radians(a0 + (a1 - a0) * i / n)),
+            cz + radius * math.sin(math.radians(a0 + (a1 - a0) * i / n))) for i in range(n + 1)]
+    for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
+        ang = math.degrees(math.atan2(x1 - x0, z1 - z0))
+        p.box((size[0], size[1], math.hypot(x1 - x0, z1 - z0) + size[0] * 0.5), color,
+              pos=((x0 + x1) / 2, 0, (z0 + z1) / 2), rot=(0, ang, 0))
+
+
+def long_grip(w, z0, z1, wrap="leather_strap", ring="gold", r=0.1):
+    band(w("Handle"), z0, z1, r, r, r * 0.3, wrap)
+    z = z0 + 0.15
+    while z < z1 - 0.1:
+        band(w("Handle"), z - 0.035, z + 0.035, r * 1.2, r * 1.2, r * 0.35, ring)
+        z += 0.38
+
+
 def radiant_greatsword():
-    """White Knight: a great holy blade with winged gold guard, a red gem and a glowing rune."""
-    w = Weapon("RadiantGreatsword", damage=38, cooldown=0.95, glow=GOLD_LIGHT)
-    band(w("Handle"), -0.5, 0.5, 0.1, 0.1, 0.03, "cloth_royal")
-    for z in (-0.35, 0.0, 0.35):
-        band(w("Handle"), z - 0.04, z + 0.04, 0.12, 0.12, 0.03, "gold")
+    """White Knight: a very long holy greatsword - silver blade with an engraved gold
+    fuller and a glowing rune, gold curved quillons, a blue gem and a long grip."""
+    w = Weapon("RadiantGreatsword", damage=42, cooldown=1.0, glow=GOLD_LIGHT)
+    long_grip(w, -0.75, 0.7, wrap="cloth_royal")
     b = w("Blade")
-    b.loft([(0.75, diamond(0.36, 0.07)), (1.4, diamond(0.4, 0.075)), (3.8, diamond(0.36, 0.065)),
-            (4.8, diamond(0.26, 0.05))], "blade", tip=(0, 0, 5.7))
-    b.box((0.16, 0.16, 2.6), "gold_engraved", pos=(0, 0, 2.2), top=(0.6, 1))  # engraved fuller
-    for s in (1, -1):  # ricasso langets
-        b.box((0.08, 0.18, 0.5), "gold", pos=(s * 0.34, 0, 0.95), top=(0.5, 1))
+    b.loft([(1.0, diamond(0.46, 0.08)), (1.6, diamond(0.5, 0.085)), (5.4, diamond(0.44, 0.075)),
+            (6.5, diamond(0.32, 0.06))], "blade", tip=(0, 0, 7.7))
+    b.box((0.2, 0.18, 3.6), "gold_engraved", pos=(0, 0, 3.0), top=(0.5, 1))
     g = w("Glow")
-    g.box((0.05, 0.19, 2.2), "glow", pos=(0, 0, 2.3), top=(0.3, 1))  # holy rune line
-    for z in (1.4, 2.1, 2.8):
-        g.box((0.14, 0.2, 0.05), "glow", pos=(0, 0, z), rot=(0, 45, 0))
+    g.box((0.05, 0.2, 3.2), "glow", pos=(0, 0, 3.1), top=(0.3, 1))
+    for z in (1.8, 2.6, 3.4, 4.2):
+        g.box((0.16, 0.21, 0.06), "glow", pos=(0, 0, z), rot=(0, 45, 0))
     gd = w("Guard")
-    gd.box((0.5, 0.26, 0.26), "gold_engraved", pos=(0, 0, 0.62))
-    wing_guard(gd, 0.62, 0.85)
-    gem(gd, (0, -0.14, 0.62), 0.12)
-    gem(gd, (0, 0.14, 0.62), 0.12)
+    gd.box((0.62, 0.32, 0.34), "gold_engraved", pos=(0, 0, 0.85))
+    for s in (1, -1):
+        arc_boxes(gd, (s * 0.3, 1.3), 0.55, 270, 270 + s * 75, 5, (0.15, 0.2), "gold")
+        gd.spike((s * 0.85, 0, 1.25), (s * 0.3, 0, 1), 0.35, 0.08, "gold", sides=4)
+        b.box((0.09, 0.22, 0.6), "gold", pos=(s * 0.42, 0, 1.25), top=(0.4, 1))  # langets
+    wing_guard(gd, 0.85, 0.7, feathers=3)
+    gem(gd, (0, -0.17, 0.85), 0.14, color="gem_blue")
+    gem(gd, (0, 0.17, 0.85), 0.14, color="gem_blue")
     pm = w("Pommel")
-    pm.loft([(-0.55, diamond(0.1, 0.1)), (-0.7, diamond(0.2, 0.2)), (-0.85, diamond(0.1, 0.1))], "gold_engraved",
-            base=(0, 0, -1.05))
-    gem(pm, (0, 0, -0.7), 0.1)
+    pm.loft([(-0.78, diamond(0.12, 0.12)), (-0.95, diamond(0.24, 0.24)), (-1.12, diamond(0.12, 0.12))],
+            "gold_engraved", base=(0, 0, -1.35))
+    gem(pm, (0, 0, -0.95), 0.12, color="gem_blue")
     return w
 
 
 def abyss_greatsword():
-    """Black Knight: one of a pair of long black greatswords (wielded in both hands)."""
-    w = Weapon("AbyssGreatsword", damage=30, cooldown=0.8, glow=EMBER)
+    """Black Knight: one of a pair of enormous straight greatswords (as long as he is
+    tall) with an open slot down the blade, a hooked tip and silver curved quillons.
+    Wielded one in each hand."""
+    w = Weapon("AbyssGreatsword", damage=36, cooldown=0.9, glow=EMBER)
     w.dual = True
-    band(w("Handle"), -0.5, 0.45, 0.09, 0.09, 0.03, "leather_strap")
-    for z in (-0.3, 0.05, 0.35):
-        band(w("Handle"), z - 0.035, z + 0.035, 0.11, 0.11, 0.03, "gold")
-    b = w("Blade")
-    b.loft([(0.65, diamond(0.3, 0.07)), (1.3, diamond(0.34, 0.07)), (4.2, diamond(0.3, 0.06)),
-            (5.0, diamond(0.2, 0.045))], "blade_dark", tip=(0, 0, 5.8))
-    b.box((0.12, 0.15, 3.6), "gold_engraved", pos=(0, 0, 2.6), top=(0.5, 1))  # gold spine
-    g = w("Glow")
-    for s in (1, -1):  # ember edge lines
-        g.box((0.035, 0.12, 3.4), "glow", pos=(s * 0.25, 0, 2.6), rot=(0, s * -0.7, 0), top=(0.5, 1))
+    long_grip(w, -0.8, 0.7)
+    b, g = w("Blade"), w("Glow")
+    b.loft([(0.95, diamond(0.44, 0.085)), (1.7, diamond(0.46, 0.085))], "blade_dark")
+    for s in (1, -1):  # the two rails either side of the open slot
+        rail = [(s * 0.17, 0.07), (s * 0.17, -0.07), (s * 0.46, 0.0)]
+        b.loft([(1.7, rail), (6.4, [(x * 0.96, y) for x, y in rail])], "blade_dark")
+        b.box((0.03, 0.05, 4.7), "blade", pos=(s * 0.45, 0, 4.05))  # bright cutting edge
+    b.loft([(6.4, diamond(0.44, 0.08)), (6.9, diamond(0.42, 0.075))], "blade_dark", tip=(-0.15, 0, 7.75))
+    arc_boxes(b, (0.2, 7.0), 0.3, -10, 150, 6, (0.12, 0.13), "blade_dark")  # hooked tip
+    g.box((0.05, 0.05, 4.6), "glow", pos=(0, 0, 4.05))  # ember core glowing in the slot
+    b.box((0.94, 0.2, 0.08), "gold", pos=(0, 0, 1.0))
     gd = w("Guard")
-    gd.box((0.95, 0.24, 0.2), "plate_black", pos=(0, 0, 0.55))
-    gd.box((1.0, 0.27, 0.06), "gold", pos=(0, 0, 0.66))
-    for s in (1, -1):  # horned guard curving toward the blade
-        gd.spike((s * 0.45, 0, 0.55), (s * 0.7, 0, 1), 0.55, 0.1, "gold", sides=4)
-        gd.spike((s * 0.45, 0, 0.5), (s * 1, 0, -0.5), 0.35, 0.08, "plate_black", sides=4)
-    gem(gd, (0, -0.13, 0.55), 0.1)
-    gem(gd, (0, 0.13, 0.55), 0.1)
+    gd.box((0.6, 0.3, 0.3), "blade", pos=(0, 0, 0.82))
+    for s in (1, -1):  # silver quillons curving up toward the blade
+        arc_boxes(gd, (s * 0.25, 1.4), 0.62, 270, 270 + s * 70, 5, (0.14, 0.22), "blade")
+        gd.spike((s * 0.75, 0, 1.4), (s * 0.4, 0, 1), 0.4, 0.07, "blade", sides=4)
+    gem(gd, (0, -0.16, 0.82), 0.11)
+    gem(gd, (0, 0.16, 0.82), 0.11)
     pm = w("Pommel")
-    pm.loft([(-0.52, diamond(0.12, 0.12)), (-0.66, diamond(0.18, 0.18))], "gold", tip=(0, 0, -1.0))
+    pm.loft([(-0.82, diamond(0.13, 0.13)), (-0.98, diamond(0.2, 0.2))], "blade", tip=(0, 0, -1.4))
     return w
 
 
 def royal_halberd():
-    """Royal Guard: gilded halberd with a crescent axe, a long spike and a red tassel."""
-    w = Weapon("RoyalHalberd", damage=26, cooldown=1.0, two_handed=True, glow=GOLD_LIGHT)
-    haft(w, -1.6, 3.4, 0.07, color="black", rings=(-1.5, 0.5, 2.8), ring_color="gold")
+    """Royal Guard: a towering gilded halberd - huge crescent axe, long spike and back hook."""
+    w = Weapon("RoyalHalberd", damage=34, cooldown=1.2, two_handed=True, glow=GOLD_LIGHT)
+    haft(w, -2.2, 5.0, 0.085, color="black", rings=(-2.1, -0.4, 1.4, 4.4), ring_color="gold")
     h = w("Head")
-    tube(h, 3.2, 3.75, 0.11, 0.1, "gold_engraved", sides=8)
-    # Crescent axe blade on -Y.
+    tube(h, 4.6, 5.5, 0.13, 0.12, "gold_engraved", sides=8)
     pts = []
-    for k in range(9):
-        a = math.radians(-70 + 140 * k / 8)
-        pts.append((-0.25 - 0.85 * math.cos(a) * 0.9, 3.45 + 0.75 * math.sin(a)))
+    for k in range(13):  # crescent axe on -Y
+        a = math.radians(-75 + 150 * k / 12)
+        pts.append((-0.35 - 1.25 * math.cos(a), 5.05 + 1.15 * math.sin(a)))
     for (y0, z0), (y1, z1) in zip(pts, pts[1:]):
-        h.box((0.05, 0.3, math.hypot(y1 - y0, z1 - z0) + 0.04), "blade", pos=(0, (y0 + y1) / 2 + 0.13, (z0 + z1) / 2),
+        h.box((0.06, 0.45, math.hypot(y1 - y0, z1 - z0) + 0.05), "blade", pos=(0, (y0 + y1) / 2 + 0.2, (z0 + z1) / 2),
               rot=(-math.degrees(math.atan2(y1 - y0, z1 - z0)), 0, 0))
-    h.box((0.07, 0.5, 0.6), "gold_engraved", pos=(0, -0.3, 3.45), top=(1, 0.7))
-    h.spike((0, 0.1, 3.45), (0, 1, 0.25), 0.75, 0.1, "blade", sides=4)  # back spike
-    h.loft([(3.75, diamond(0.1, 0.06)), (4.05, diamond(0.17, 0.05))], "blade", tip=(0, 0, 4.9))
-    gem(h, (0, -0.12, 3.5), 0.09)
-    gem(h, (0, 0.12, 3.5), 0.09)
-    for k in range(5):  # tassel
-        a = 2 * math.pi * k / 5
-        h.spike((0.1 * math.cos(a), 0.1 * math.sin(a), 3.15), (0.25 * math.cos(a), 0.25 * math.sin(a), -1), 0.6, 0.05,
-                "cloth_royal", sides=4)
-    w("Glow").spike((0, 0, 4.4), (0, 0, 1), 0.3, 0.03, "glow", sides=4)
+        h.box((0.08, 0.06, math.hypot(y1 - y0, z1 - z0) + 0.05), "gold", pos=(0, (y0 + y1) / 2 + 0.42, (z0 + z1) / 2),
+              rot=(-math.degrees(math.atan2(y1 - y0, z1 - z0)), 0, 0))
+    h.box((0.09, 0.7, 0.9), "gold_engraved", pos=(0, -0.4, 5.05), top=(1, 0.6))
+    h.spike((0, 0.12, 5.05), (0, 1, 0.35), 1.1, 0.13, "blade", sides=4)  # back hook
+    h.loft([(5.5, diamond(0.13, 0.07)), (5.9, diamond(0.24, 0.06))], "blade", tip=(0, 0, 7.2))
+    gem(h, (0, -0.15, 5.1), 0.12)
+    gem(h, (0, 0.15, 5.1), 0.12)
+    for k in range(6):  # tassel
+        a = 2 * math.pi * k / 6
+        h.spike((0.12 * math.cos(a), 0.12 * math.sin(a), 4.55), (0.25 * math.cos(a), 0.25 * math.sin(a), -1), 0.85,
+                0.06, "cloth_royal", sides=4)
+    w("Glow").box((0.04, 0.08, 1.0), "glow", pos=(0, 0, 6.3), top=(0.3, 1))
     return w
 
 
 def eye_warhammer():
-    """Paladin of the Eye: a white-and-gold warhammer whose face is a glowing eye."""
-    w = Weapon("EyeWarhammer", damage=30, cooldown=1.15, two_handed=True)
-    haft(w, -1.3, 2.8, 0.075, color="plate_white", rings=(-1.2, 0.3, 2.3), ring_color="gold")
+    """Paladin of the Eye: a colossal two-handed maul. A white-and-gold head the size of
+    a chest, a glowing eye on each face, spikes, on a long gilded haft."""
+    w = Weapon("EyeWarhammer", damage=46, cooldown=1.6, two_handed=True)
+    haft(w, -2.0, 4.3, 0.1, color="plate_white", rings=(-1.9, -0.6, 0.8, 2.4, 3.9), ring_color="gold")
     h = w("Head")
-    h.box((0.55, 0.95, 0.55), "gold_engraved", pos=(0, 0, 3.05))
-    for s in (1, -1):  # flanges
-        h.box((0.08, 0.7, 0.75), "plate_white", pos=(s * 0.3, 0, 3.05), top=(1, 0.6))
-    h.box((0.62, 0.12, 0.62), "plate_white", pos=(0, -0.5, 3.05))  # striking face
-    h.spike((0, 0.45, 3.05), (0, 1, 0.3), 0.7, 0.16, "gold", sides=4)  # back beak
-    h.spike((0, 0, 3.32), (0, 0, 1), 0.6, 0.12, "gold", sides=4)  # top spike
+    h.box((1.15, 1.9, 1.15), "gold_engraved", pos=(0, 0, 4.8))
+    for s in (1, -1):
+        h.box((1.3, 0.22, 1.3), "plate_white", pos=(0, s * 1.0, 4.8))  # striking faces
+        h.box((1.4, 0.1, 1.4), "gold", pos=(0, s * 0.88, 4.8))
+        h.box((0.12, 1.6, 1.0), "plate_white", pos=(s * 0.62, 0, 4.8), top=(1, 0.7))  # flanges
+        for x in (-0.5, 0.5):
+            for z in (4.3, 5.3):
+                h.spike((x, s * 1.1, z), (x, s * 0.6, z - 4.8), 0.3, 0.07, "gold", sides=4)
+    h.spike((0, 0, 5.4), (0, 0, 1), 1.0, 0.2, "gold", sides=4)  # top spike
+    tube(h, 4.1, 4.25, 0.25, 0.25, "gold", sides=8)
     g = w("Glow")
-    g.box((0.42, 0.04, 0.12), "glow", pos=(0, -0.57, 3.05))
-    g.box((0.2, 0.05, 0.2), "glow", pos=(0, -0.58, 3.05), rot=(0, 45, 0))
-    for k in range(6):  # rays around the eye
-        a = 2 * math.pi * k / 6
-        g.box((0.04, 0.03, 0.12), "glow", pos=(0.24 * math.cos(a), -0.57, 3.05 + 0.24 * math.sin(a)),
-              rot=(0, -math.degrees(a) + 90, 0))
+    for s in (1, -1):  # the eye on both faces, with rays
+        g.box((0.75, 0.05, 0.2), "glow", pos=(0, s * 1.12, 4.8))
+        g.box((0.34, 0.06, 0.34), "glow", pos=(0, s * 1.13, 4.8), rot=(0, 45, 0))
+        for k in range(8):
+            a = 2 * math.pi * k / 8
+            g.box((0.06, 0.05, 0.2), "glow", pos=(0.5 * math.cos(a), s * 1.12, 4.8 + 0.5 * math.sin(a)),
+                  rot=(0, -math.degrees(a) + 90, 0))
     return w
 
 
-def eclipse_saber():
-    """The Prince's curved saber: a navy crescent blade with a glowing cyan edge, a gold
-    crescent-moon guard and a golden eye gem."""
-    w = Weapon("EclipseSaber", damage=34, cooldown=0.6, glow=CYAN)
-    band(w("Handle"), -0.4, 0.4, 0.085, 0.085, 0.03, "cloth_royal")
-    for z in (-0.25, 0.15):
-        band(w("Handle"), z - 0.035, z + 0.035, 0.1, 0.1, 0.03, "gold")
+def moon_blade():
+    """The Prince's moon blade: a long crescent saber of black steel with a violet glowing
+    edge and a gold crescent guard. He wields a pair (one in each hand)."""
+    w = Weapon("MoonBlade", damage=32, cooldown=0.55, glow=PURPLE_HOT)
+    w.dual = True
+    band(w("Handle"), -0.5, 0.5, 0.09, 0.09, 0.03, "cloth_royal")
+    for z in (-0.3, 0.1, 0.4):
+        band(w("Handle"), z - 0.035, z + 0.035, 0.11, 0.11, 0.03, "gold")
     b, g = w("Blade"), w("Glow")
-    # Curved blade: short tapered segments bending toward -X.
-    x, z, ang = 0.0, 0.62, 0.0
-    n = 12
+    x, z, ang = 0.0, 0.72, 0.0
+    n = 14
     for k in range(n):
         t = k / n
-        seg = 0.37
-        wd = 0.36 * (1 - t) ** 0.5 + 0.06
-        ang += 2.6
+        seg = 0.4
+        wd = 0.5 * (1 - t) ** 0.6 + 0.07
+        ang += 3.0
         ca = math.radians(ang)
         cx, cz = x - math.sin(ca) * seg / 2, z + math.cos(ca) * seg / 2
-        b.box((wd, 0.07, seg + 0.03), "plate_navy", pos=(cx, 0, cz), rot=(0, -ang, 0), top=(0.92, 0.9))
-        g.box((0.05, 0.08, seg + 0.03), "glow", pos=(cx + math.cos(ca) * wd / 2, 0, cz + math.sin(ca) * wd / 2),
+        b.box((wd, 0.08, seg + 0.04), "blade_dark", pos=(cx, 0, cz), rot=(0, -ang, 0), top=(0.93, 0.9))
+        g.box((0.06, 0.09, seg + 0.04), "glow", pos=(cx + math.cos(ca) * wd / 2, 0, cz + math.sin(ca) * wd / 2),
               rot=(0, -ang, 0))
+        if k % 4 == 1:  # crystal thorns on the spine
+            g.spike((cx - math.cos(ca) * wd / 2, 0, cz - math.sin(ca) * wd / 2), (-math.cos(ca), 0, -math.sin(ca) + 0.4),
+                    0.28, 0.05, "glow", sides=4)
         x, z = x - math.sin(ca) * seg, z + math.cos(ca) * seg
-    b.spike((x, 0, z), (-math.sin(math.radians(ang + 10)), 0, math.cos(math.radians(ang + 10))), 0.5, 0.06,
-            "plate_navy", sides=4)
+    b.spike((x, 0, z), (-math.sin(math.radians(ang + 10)), 0, math.cos(math.radians(ang + 10))), 0.6, 0.07,
+            "blade_dark", sides=4)
     gd = w("Guard")
-    # Crescent-moon guard.
-    for k in range(9):
-        a = math.radians(200 + 140 * k / 8)
-        gd.box((0.14, 0.18, 0.1), "gold_engraved", pos=(0.5 * math.cos(a), 0, 0.85 + 0.35 * math.sin(a)),
-               rot=(0, -math.degrees(a) - 90, 0))
-    gd.box((0.3, 0.22, 0.2), "gold", pos=(0, 0, 0.55))
-    gem(gd, (0, -0.13, 0.55), 0.09, color="gold")
-    g.box((0.1, 0.05, 0.1), "glow", pos=(0, -0.2, 0.55), rot=(0, 45, 0))
+    arc_boxes(gd, (0, 1.05), 0.6, 200, 340, 8, (0.14, 0.22), "gold_engraved")  # crescent moon guard
+    for s in (1, -1):
+        gd.spike((s * 0.58, 0, 0.88), (s, 0, 0.9), 0.35, 0.07, "gold", sides=4)
+    gd.box((0.34, 0.24, 0.24), "gold", pos=(0, 0, 0.6))
+    gem(gd, (0, -0.15, 0.6), 0.1, color="glow")
     pm = w("Pommel")
-    pm.loft([(-0.45, diamond(0.1, 0.1)), (-0.58, diamond(0.16, 0.16))], "gold_engraved", tip=(0, 0, -0.85))
+    pm.loft([(-0.55, diamond(0.1, 0.1)), (-0.7, diamond(0.17, 0.17))], "gold_engraved", tip=(0, 0, -1.0))
+    return w
+
+
+def moon_spear():
+    """The Prince's spear: a long black-and-gold glaive whose head is a crescent moon
+    around a long blade, edged in violet light."""
+    w = Weapon("MoonSpear", damage=34, cooldown=0.9, two_handed=True, glow=PURPLE_HOT)
+    haft(w, -2.0, 5.0, 0.08, color="black", rings=(-1.9, -0.2, 1.6, 4.5), ring_color="gold")
+    h, g = w("Head"), w("Glow")
+    tube(h, 4.6, 5.3, 0.12, 0.11, "gold_engraved", sides=8)
+    arc_boxes(h, (0, 5.75), 0.75, 200, 340, 9, (0.14, 0.12), "blade_dark")  # crescent
+    arc_boxes(g, (0, 5.75), 0.84, 205, 335, 9, (0.05, 0.13), "glow")
+    for s in (1, -1):
+        h.spike((s * 0.72, 0, 5.6), (s * 0.6, 0, 1), 0.7, 0.08, "blade_dark", sides=4)  # moon horns
+    h.loft([(5.3, diamond(0.14, 0.07)), (5.9, diamond(0.26, 0.06)), (6.8, diamond(0.16, 0.045))], "blade_dark",
+           tip=(0, 0, 7.6))
+    g.box((0.04, 0.08, 1.6), "glow", pos=(0, 0, 6.4), top=(0.3, 1))
+    gem(h, (0, -0.13, 5.0), 0.1, color="glow")
+    for k in range(4):
+        g.spike((0, 0.1, 4.7 - 0.25 * k), (0.4 * (-1) ** k, 1, 0.3), 0.3, 0.05, "glow", sides=4)
+    return w
+
+
+# ---------------------------------------------------------------------------
+# Weapons of the heavily infected elites: crystal has overgrown the steel.
+def crystal_burst(w, center, count, seed, length=(0.3, 0.8), spread=0.25, radius=(0.06, 0.13), up=0.3):
+    cluster(w, center, count, seed, spread=spread, length=length, radius=radius, up=up)
+
+
+def blight_scythe():
+    """Blighted villager: a huge scythe whose blade is half crystal."""
+    w = Weapon("BlightScythe", damage=30, cooldown=1.3, two_handed=True)
+    haft(w, -1.8, 4.2, 0.08, rings=(0.8, 3.9), ring_color="leather_strap")
+    w("Handle").box((0.09, 0.42, 0.09), "wood", pos=(0, -0.25, 1.2))
+    b, g = w("Blade"), w("Glow")
+    prev = (0.0, 4.15)
+    for k in range(1, 14):
+        t = k / 13
+        y, z = -3.0 * t, 4.15 + 0.6 * math.sin(t * math.pi * 0.9) - 0.35 * t
+        ang = math.degrees(math.atan2(z - prev[1], y - prev[0]))
+        mid = ((y + prev[0]) / 2, (z + prev[1]) / 2)
+        L = math.hypot(y - prev[0], z - prev[1]) + 0.05
+        b.box((0.05, L, 0.36 * (1 - t) + 0.06), "blade_corrupt", pos=(0, mid[0], mid[1] - 0.14), rot=(ang, 0, 0))
+        g.box((0.06, L, 0.05), "glow", pos=(0, mid[0], mid[1] - 0.3 * (1 - t) - 0.04), rot=(ang, 0, 0))
+        if k % 2 == 0:  # crystal teeth along the edge
+            g.spike((0, mid[0], mid[1] - 0.3 * (1 - t) - 0.06), (0, 0.3, -1), 0.3 * (1 - t) + 0.12, 0.05, "glow", sides=4)
+        prev = (y, z)
+    crystal_burst(w, (0, 0, 4.1), 7, 21)
+    crystal_burst(w, (0, 0, 2.2), 4, 22, length=(0.2, 0.45), spread=0.1)
+    return w
+
+
+def crystal_maul():
+    """Blighted woodcutter: a sledge whose head has erupted into a crystal cluster."""
+    w = Weapon("CrystalMaul", damage=40, cooldown=1.6, two_handed=True)
+    haft(w, -1.0, 3.6, 0.1, rings=(-0.9, 3.0), ring_color="iron")
+    h = w("Head")
+    h.box((0.9, 1.4, 0.9), "plate_corrupt_heavy", pos=(0, 0, 3.75))
+    for s in (1, -1):
+        h.box((1.0, 0.15, 1.0), "iron", pos=(0, s * 0.72, 3.75))
+    crystal_burst(w, (0, 0, 4.1), 12, 23, length=(0.6, 1.4), spread=0.35, radius=(0.1, 0.2), up=0.5)
+    crystal_burst(w, (0, -0.7, 3.75), 5, 24, length=(0.4, 0.8), spread=0.3, up=-0.3)
+    crystal_burst(w, (0, 0, 2.6), 4, 25, length=(0.2, 0.5), spread=0.1)
+    return w
+
+
+def blight_greatsword():
+    """Blighted knight: a greatsword the corruption has split open - crystal shards
+    grow out of the cracked blade."""
+    w = Weapon("BlightGreatsword", damage=40, cooldown=1.1, two_handed=True)
+    long_grip(w, -0.7, 0.6, ring="plate_dark")
+    b = w("Blade")
+    b.loft([(0.9, diamond(0.42, 0.08)), (3.0, diamond(0.46, 0.08)), (5.6, diamond(0.36, 0.06))], "blade_corrupt",
+           tip=(0.1, 0, 6.6))
+    w("Guard").box((1.5, 0.3, 0.26), "plate_corrupt_heavy", pos=(0, 0, 0.8))
+    for s in (1, -1):
+        w("Guard").spike((s * 0.75, 0, 0.8), (s, 0, 0.5), 0.5, 0.1, "plate_corrupt_heavy", sides=4)
+    w("Glow").box((0.06, 0.18, 4.4), "glow", pos=(0, 0, 3.2), top=(0.3, 1))
+    rnd = random.Random(26)
+    for _ in range(14):  # shards breaking out of both edges
+        z = rnd.uniform(1.2, 5.4)
+        s = rnd.choice((1, -1))
+        w("Glow").spike((s * 0.38, 0, z), (s, rnd.uniform(-0.4, 0.4), rnd.uniform(0.2, 1.2)), rnd.uniform(0.3, 0.75),
+                        rnd.uniform(0.06, 0.11), "glow", sides=5)
+    crystal_burst(w, (0, 0, 1.0), 6, 27, length=(0.3, 0.7))
+    blob(w("Pommel"), (0, 0, -0.85), (0.16, 0.16, 0.16), "plate_corrupt_heavy", sides=6, rings=3)
+    return w
+
+
+def crystal_war_axe():
+    """Blighted knight: a double-bitted war axe with crystal blades."""
+    w = Weapon("CrystalWarAxe", damage=42, cooldown=1.3, two_handed=True)
+    haft(w, -1.2, 4.2, 0.09, color="plate_dark", rings=(-1.1, 1.0, 3.2), ring_color="plate_corrupt_heavy")
+    h, g = w("Head"), w("Glow")
+    for s in (1, -1):  # two bits, -Y and +Y
+        outline = [(0.0, 0.35), (0.7, 0.55), (1.3, 1.0), (1.3, -1.0), (0.7, -0.55), (0.0, -0.35)]
+        prof = [(-up, -s * across) for across, up in outline]
+        h.loft([(-0.07, prof), (0.07, prof)], "plate_corrupt_heavy", pos=(0, 0, 3.6), rot=(0, 90, 0))
+        for k in range(5):  # crystal edge
+            zz = 3.6 - 0.9 + 0.45 * k
+            g.spike((0, s * 1.3, zz), (0, s, 0.2 * (k - 2)), 0.35, 0.07, "glow", sides=4)
+    h.spike((0, 0, 4.2), (0, 0, 1), 0.8, 0.12, "plate_corrupt_heavy", sides=4)
+    crystal_burst(w, (0, 0, 3.6), 8, 28, length=(0.4, 0.9))
     return w
 
 
@@ -578,5 +714,6 @@ def all_weapons():
             + [tier_axe(t) for t in ("Apprentice", "Mid", "High")]
             + [tier_sword(t) for t in ("Apprentice", "Mid", "High")]
             + [spear(), dragon_slayer(), serrated_spear(), serrated_sword(), serrated_cleaver()]
-            + [radiant_greatsword(), abyss_greatsword(), royal_halberd(), eye_warhammer(),
-               eclipse_saber()])
+            + [radiant_greatsword(), abyss_greatsword(), royal_halberd(), eye_warhammer(), moon_blade(),
+               moon_spear()]
+            + [blight_scythe(), crystal_maul(), blight_greatsword(), crystal_war_axe()])

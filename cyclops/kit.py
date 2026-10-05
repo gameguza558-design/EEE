@@ -67,7 +67,8 @@ R15_POS = {
 # Materials painted as one plate per face (bevel, rivets, stitching) map each face onto
 # the whole tile. Organic/fabric materials keep a constant texel density instead, so
 # small faces show a small patch of the tile rather than a squashed copy of it.
-DENSITY_TILES = {"skin", "skin_corrupt", "skin_king", "hair", "fur", "fur_dark", "cloth",
+DENSITY_TILES = {"plate_white", "plate_black", "cloth_royal", "cloth_white",
+                 "skin", "skin_corrupt", "skin_king", "hair", "fur", "fur_dark", "cloth",
                  "cloth_dark", "cloth_brown", "cloth_green", "linen", "pants", "quilt",
                  "chainmail", "wood", "rope", "horn", "body"}
 STUDS_PER_TILE = 1.3
@@ -104,16 +105,20 @@ class Piece:
     def __init__(self):
         self.bm = bmesh.new()
         self.col = self.bm.faces.layers.int.new("col")
+        self.smooth = self.bm.faces.layers.int.new("smooth")
 
-    def _faces(self, verts, faces, color):
+    def _faces(self, verts, faces, color, smooth=0):
+        """smooth: number of leading faces to shade smooth (the sides of a loft)."""
         vs = [self.bm.verts.new(v) for v in verts]
-        for f in faces:
+        for k, f in enumerate(faces):
             face = self.bm.faces.new([vs[i] for i in f])
             face[self.col] = TILES.index(color)
+            face[self.smooth] = 1 if k < smooth else 0
 
-    def loft(self, rings, color, pos=(0, 0, 0), rot=(0, 0, 0), tip=None, base=None):
+    def loft(self, rings, color, pos=(0, 0, 0), rot=(0, 0, 0), tip=None, base=None, smooth=False):
         """rings: list of (z, profile) where profile is a list of (x, y) points.
-        tip/base: optional (x, y, z) apex to close the top/bottom with a point."""
+        tip/base: optional (x, y, z) apex to close the top/bottom with a point.
+        smooth: shade the sides smooth (rounded plates, capes); caps stay flat."""
         m = Euler([math.radians(a) for a in rot]).to_matrix()
         p = Vector(pos)
         verts, faces = [], []
@@ -125,6 +130,7 @@ class Piece:
             for i in range(n):
                 j = (i + 1) % n
                 faces.append((a + i, a + j, b + j, b + i))
+        sides = len(faces) if smooth else 0
         last = (len(rings) - 1) * n
         if tip is not None:
             verts.append(tuple(m @ Vector(tip) + p))
@@ -138,7 +144,7 @@ class Piece:
             faces += [((i + 1) % n, i, t) for i in range(n)]
         else:
             faces.append(tuple(reversed(range(n))))
-        self._faces(verts, faces, color)
+        self._faces(verts, faces, color, smooth=sides)
 
     def box(self, size, color, pos=(0, 0, 0), rot=(0, 0, 0), top=(1, 1), bottom=(1, 1),
             shift=(0, 0)):
@@ -215,11 +221,12 @@ class Piece:
         for f in bm.faces:
             for loop, coords in zip(f.loops, face_uvs(f, TILES[f[self.col]])):
                 loop[uv].uv = coords
+        flags = [f[self.smooth] for f in bm.faces]
         mesh = bpy.data.meshes.new(name)
         bm.to_mesh(mesh)
         bm.free()
-        for poly in mesh.polygons:
-            poly.use_smooth = False
+        for poly, flag in zip(mesh.polygons, flags):
+            poly.use_smooth = bool(flag)
         mesh.materials.append(material)
         obj = bpy.data.objects.new(name, mesh)
         obj.location = location
@@ -301,25 +308,6 @@ def make_materials(img):
             bsdf.inputs["Emission Strength"].default_value = 4.0
         return m
     return mat("Armor", False), mat("Glow", True)
-
-
-def export_fbx(path, objects):
-    bpy.ops.object.select_all(action="DESELECT")
-    for o in objects:
-        o.select_set(True)
-    bpy.ops.export_scene.fbx(
-        filepath=path,
-        use_selection=True,
-        object_types={"MESH"},
-        mesh_smooth_type="FACE",
-        path_mode="COPY",
-        embed_textures=True,
-        # Blender -Y (character front) -> -Z, Roblox's forward.
-        axis_forward="Z",
-        axis_up="Y",
-    )
-
-
 
 
 def export_fbx(path, objects):

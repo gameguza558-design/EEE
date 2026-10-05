@@ -9,6 +9,7 @@ build ด้วย `python3 cyclops/roster2.py` (ไฟล์อยู่ที�
 ![stage2](renders/r15_stage2_front.png)
 ![court](renders/r15_court_front.png)
 ![army](renders/r15_army_front.png)
+![elite](renders/r15_elite_front.png)
 ![prince](renders/r15_CyclopsPrince_hero.png)
 ![boss](renders/r15_CyclopsKing_hero.png)
 ![boss3d](renders/r15_CyclopsKing3D_hero.png)
@@ -32,19 +33,23 @@ build ด้วย `python3 cyclops/roster2.py` (ไฟล์อยู่ที�
 | ด่าน 2 | `WolfKnight` อัศวินหมาป่า | `SerratedSword` หรือ `SerratedSpear` (ฟันเลื่อย) |
 | กองทัพ | `Spearman` พลหอก | `Spear` |
 | กองทัพ | `SpearmanShield` พลหอกโล่ | `Spear` + `CyclopsShield = true` (โล่ทาวเวอร์) |
-| ราชสำนัก | `KnightWhite` อัศวินขาว (เกราะขาวทอง หมวกปีก ผ้าคลุมแดง) | `RadiantGreatsword` + `CyclopsShield = true` (โล่ขาวทองฝังทับทิม) |
-| ราชสำนัก | `KnightBlack` อัศวินดำ (เกราะดำทอง หมวกเขาแหลม ผ้าคลุมแดง) | `AbyssGreatsword` (ถือคู่ สองมือ) |
-| ราชสำนัก | `KnightRoyalGuard` ราชองครักษ์ (แทนขุนนาง) | `RoyalHalberd` |
-| ราชสำนัก | `KnightPaladin` อัศวินศักดิ์สิทธิ์แห่งดวงตา (แทนบาทหลวง มีวงรัศมี) | `EyeWarhammer` |
+| ราชสำนัก | `KnightWhite` อัศวินขาว (เกราะขาวขัดเงาเส้นทอง หมวกปีก ทับทิมฟ้าที่อก ผ้าคลุมแดง) | `RadiantGreatsword` (ดาบยาวเท่าตัว) + `CyclopsShield = true` |
+| ราชสำนัก | `KnightBlack` อัศวินดำ (แนว Momon: เกราะดำลายกล้ามเส้นทอง สนับเข่าทอง ผ้าคลุมแดง) | `AbyssGreatsword` (ดาบยาวสองเล่ม ถือคู่) |
+| ราชสำนัก | `KnightRoyalGuard` ราชองครักษ์ | `RoyalHalberd` (ง้าวสูงท่วมหัว) |
+| ราชสำนัก | `KnightPaladin` อัศวินแห่งดวงตา (วงรัศมี) | `EyeWarhammer` (ค้อนยักษ์สองมือ) |
+| Elite ชาวบ้าน | `VillagerBlighted` ชาวนาติดเชื้อหนัก | `BlightScythe` |
+| Elite ชาวบ้าน | `WoodcutterBlighted` คนตัดไม้ติดเชื้อหนัก (แขนซ้ายเป็นกำปั้นคริสตัล) | `CrystalMaul` |
+| Elite อัศวิน | `KnightBlighted` อัศวินติดเชื้อหนัก | `BlightGreatsword` |
+| Elite อัศวิน | `KnightBlightedAxe` อัศวินติดเชื้อหนัก (ขวาน) | `CrystalWarAxe` |
 | ราชสำนัก | `General` นายพล | `DragonSlayer` (ดาบมหึมา) |
-| รองบอส | `CyclopsPrince` เจ้าชายไซคลอปส์ (ผิวกรมท่า รอยร้าวฟ้าเรือง ตาที่อก มงกุฎ) | `EclipseSaber` |
+| รองบอส | `CyclopsPrince` เจ้าชายไซคลอปส์ (ติดเชื้อหนักสุด ผิวดำม่วง รอยร้าวม่วงเรือง ตาที่อก มงกุฎ) | `MoonBlade` (ถือคู่) หรือ `MoonSpear` |
 | บอส | `CyclopsKing` ราชา (กล้ามวาด) | มือเปล่า |
 | บอส | `CyclopsKing3D` ราชา (ซิกแพ็กและอกนูนเป็น 3D จริง) | มือเปล่า |
 
 **อาวุธฟันเลื่อย** (`Serrated*`) ทำให้ติดสถานะเลือดไหล: เสียเลือด 3 ทุก 0.5 วินาที นาน 4 วินาที
 ระหว่างนั้น Humanoid จะมี attribute `Bleeding = true` (ปรับค่าได้ที่ `Kit.BLEED_*`)
 
-**ถือดาบคู่:** อาวุธที่มี `dual = true` (`AbyssGreatsword`) จะมีอีกเล่มที่มือซ้ายตอนถืออยู่
+**ถือดาบคู่:** อาวุธที่มี `dual = true` (`AbyssGreatsword`, `MoonBlade`) จะมีอีกเล่มที่มือซ้ายตอนถืออยู่
 ฟันพร้อมกันและทำดาเมจเท่ากัน
 
 **ผม:** ทุกตัวมีผม mesh ของตัวเอง (กระจุกใหญ่ ซ้อนเป็นชั้นแบบอนิเมะ) ราชามีผมทรงซูเปอร์ไซย่าสีชมพู

@@ -36,7 +36,7 @@ from outfits import common  # noqa: E402
 from style2 import FACES, Painter, cyclops_face  # noqa: E402
 
 common.PAINTED = True
-from outfits import elite, knights  # noqa: E402
+from outfits import elite, knights, parade  # noqa: E402
 from outfits.common import Outfit  # noqa: E402
 
 OUT = os.path.join(HERE, "export", "r15")
@@ -561,23 +561,25 @@ def tower_shield(o):
 
 
 def cyclops_prince():
-    """Sub-boss: the Cyclops Prince. The King's son - his pink mane, but swept back and
-    long; dark navy skin split by cyan glowing cracks, an eye on the chest, a crown with a
-    young horn, half-armour in navy and gold, a royal cape and a curved eclipse saber."""
-    ch = Character("CyclopsPrince", glow=CYAN, weapon="EclipseSaber")
+    """Sub-boss: the Cyclops Prince, the most corrupted of them all. The King's son - his
+    pink mane, but swept back and long; black-violet skin split by glowing violet cracks,
+    an eye on the chest, a crown with a young horn, crystal-overgrown half-armour, a
+    royal cape and a pair of moon blades (or the moon spear)."""
+    ch = Character("CyclopsPrince", glow=PRINCE_GLOW, weapon="MoonBlade")
     ch.sculpt = prince_bumps()
-    skin = (52, 64, 108)
+    skin = (40, 26, 52)
     p = Painter(seed=71)
     skin_all(p, skin)
     muscles(p, skin)
-    for part in ("Head", "UpperTorso", "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm"):
+    for part in style2.PARTS:
         for f in FACES:
             if f == "front" and part == "Head":
                 continue
-            p.cracks(part, f, (14, 18, 40), CYAN, count=4, seed=hash((part, f, 7)) % 997)
+            p.cracks(part, f, (12, 6, 18), PRINCE_GLOW, count=7, seed=hash((part, f, 7)) % 997)
+    p.cracks("Head", "front", (12, 6, 18), PRINCE_GLOW, count=2, seed=5)
     king_face(p, skin)
-    pants(p, (26, 28, 46), belt=(30, 30, 50), buckle=(220, 180, 70))
-    boots(p, (22, 24, 40), height=0.62, cuff=(200, 160, 70), plates=(60, 76, 130))
+    pants(p, (22, 16, 30), belt=(30, 22, 40), buckle=(220, 180, 70))
+    boots(p, (18, 14, 24), height=0.62, cuff=(200, 160, 70), plates=(70, 40, 90))
     for side in ("Left", "Right"):
         for f in SIDES4:
             p.box(side + "UpperArm", f, 0, 0.6, 1, 0.7, (220, 180, 70))  # gold arm bands
@@ -608,24 +610,35 @@ def cyclops_prince():
     t.shell([(0.7, 0.62, 0.5, 0.16), (0.9, 0.55, 0.45, 0.14)], "gold_engraved")
     la = o("LeftUpperArm")
     la.shell([(0.2, 0.82, 0.76, 0.24, 0.12, 0), (0.6, 0.76, 0.7, 0.24, 0.06, 0), (0.88, 0.42, 0.44, 0.16, 0, 0)],
-             "plate_navy")
+             "plate_corrupt_heavy")
     band(la, 0.1, 0.24, 0.85, 0.79, 0.25, "gold_engraved", dx=0.12)
     for i in range(3):
-        la.box((0.5, 1.4 - 0.1 * i, 0.3), "plate_navy", pos=(0.64 + 0.05 * i, 0, 0.42 - 0.22 * i), rot=(0, 30, 0),
+        la.box((0.5, 1.4 - 0.1 * i, 0.3), "plate_corrupt_heavy", pos=(0.64 + 0.05 * i, 0, 0.42 - 0.22 * i), rot=(0, 30, 0),
                bottom=(1, 0.9))
     for k in range(3):
         la.spike((0.5 + 0.12 * k, -0.25 + 0.25 * k, 0.85), (0.5, 0, 1), 0.5, 0.08, "gold", sides=4)
-    o.crystals("LeftUpperArm", 5, (0.55, 0, 0.6), (0.2, 0.3, 0.1), (0.8, 0, 1), length=(0.3, 0.7),
-               radius=(0.05, 0.1))
-    royal_cape(o, "cloth_royal", lining="cloth_white", length=4.3, width=1.15)
+    # The heaviest infection of the roster: crystal clusters all over.
+    o.crystals("LeftUpperArm", 10, (0.6, 0, 0.7), (0.25, 0.4, 0.15), (0.8, 0, 1), length=(0.5, 1.3),
+               radius=(0.08, 0.16))
+    o.crystals("RightUpperArm", 7, (-0.55, 0, 0.55), (0.15, 0.35, 0.1), (-0.8, 0, 1), length=(0.4, 1.0),
+               radius=(0.07, 0.14))
+    o.crystals("UpperTorso", 9, (0.0, 0.6, 0.4), (0.7, 0.05, 0.35), (0, 1, 0.8), length=(0.6, 1.5),
+               radius=(0.09, 0.18))
+    o.crystals("Head", 6, (0.0, 0.1, 0.65), (0.5, 0.4, 0.05), (0, 0.4, 1), length=(0.3, 0.7), radius=(0.05, 0.1))
+    for side, sx in (("Left", 1), ("Right", -1)):
+        o.crystals(side + "LowerArm", 4, (sx * 0.6, 0.0, 0.0), (0.05, 0.4, 0.3), (sx, 0, 0.5),
+                   length=(0.3, 0.6), radius=(0.05, 0.1))
+        o.crystals(side + "LowerLeg", 3, (sx * 0.6, 0.1, 0.0), (0.05, 0.3, 0.3), (sx, 0.3, 0.3),
+                   length=(0.25, 0.5), radius=(0.05, 0.09))
+    parade.cape(o, dict(cape="cloth_royal", lining="cloth_dark", trim="gold", trim2="gold_engraved", gem="gem"))
     # Navy-and-gold bracers and greaves, a gold belt with a gem.
     for side, sx in (("Left", 1), ("Right", -1)):
         la_ = o(side + "LowerArm")
-        la_.shell([(-0.45, 0.58, 0.58, 0.15), (0.35, 0.62, 0.62, 0.16)], "plate_navy")
+        la_.shell([(-0.45, 0.58, 0.58, 0.15), (0.35, 0.62, 0.62, 0.16)], "plate_corrupt_heavy")
         band(la_, 0.3, 0.42, 0.65, 0.65, 0.17, "gold")
         la_.spike((sx * 0.6, 0, 0.0), (sx, 0, 0.6), 0.35, 0.08, "gold", sides=4)
         ll = o(side + "LowerLeg")
-        ll.shell([(-0.1, 0.58, 0.58, 0.15), (0.48, 0.61, 0.61, 0.16)], "plate_navy")
+        ll.shell([(-0.1, 0.58, 0.58, 0.15), (0.48, 0.61, 0.61, 0.16)], "plate_corrupt_heavy")
         band(ll, 0.44, 0.58, 0.64, 0.64, 0.17, "gold_engraved")
         ll.spike((0, -0.62, 0.5), (0, -1, 0.15), 0.3, 0.16, "gold", sides=4)
     lt = o("LowerTorso")
@@ -638,6 +651,7 @@ def cyclops_prince():
 
 
 PRINCE_HAIR = ((240, 186, 236), (160, 104, 200), (255, 240, 255))
+PRINCE_GLOW = (200, 80, 255)
 
 
 def prince_bumps():
@@ -667,50 +681,6 @@ def armored_painter(seed, skin, gamb, iris=(210, 90, 255)):
     return p
 
 
-def royal_cape(o, color="cloth_royal", lining=None, length=4.5, width=1.2, clasp="gold_engraved"):
-    """A full, clean-hemmed cape from the shoulders, flaring back a little toward the hem."""
-    t = o("UpperTorso")
-    n = 11
-    xs = [-width + 2 * width * i / (n - 1) for i in range(n)]
-    bottoms = [0.88 - length + 0.18 * (x / width) ** 2 + 0.06 * math.sin(i * 1.7) for i, x in enumerate(xs)]
-    t.cloth(xs, 0.9, bottoms, 0.98, color, thick=0.06, sag=0.14, rot=(7, 0, 0), pos=(0, 0.11, 0))
-    if lining:
-        t.cloth([x * 0.97 for x in xs], 0.85, [b + 0.08 for b in bottoms], 0.9, lining, thick=0.03, sag=0.12,
-                rot=(7, 0, 0), pos=(0, 0.11, 0))
-    for sx in (1, -1):  # shoulder clasps
-        blob(t, (sx * 0.78, 0.55, 0.88), (0.17, 0.12, 0.17), clasp, sides=8, rings=4)
-        weapons.gem(t, (sx * 0.78, 0.55, 0.88), 0.08, axis="z")
-
-
-def gold_wings(h, color="gold_engraved", z=0.35, span=0.9):
-    """Feathered wings on the sides of a helmet."""
-    for s in (1, -1):
-        for k in range(4):
-            t = k / 3
-            h.spike((s * 0.78, 0.15 + 0.12 * k, z + 0.05 * k), (s * (0.6 - 0.3 * t), 0.5 + 0.4 * t, 0.8 + 0.3 * t),
-                    span * (1 - 0.18 * k), 0.08, color, sides=4)
-
-
-def chest_emblem(o, color="gold_engraved", gem_color="gem"):
-    t = o("UpperTorso")
-    t.box((0.14, 0.06, 0.95), color, pos=(0, -0.79, 0.3))
-    t.box((0.75, 0.06, 0.14), color, pos=(0, -0.79, 0.42))
-    weapons.gem(t, (0, -0.83, 0.42), 0.12, color=gem_color)
-
-
-def royal_shield(o):
-    """White Knight's shield: a white heater with a gold rim, cross, wings and a red gem."""
-    knights.heater_shield(o, face="plate_white", rim="gold_engraved")
-    s = o("LeftLowerArm", "Shield")
-    s.box((0.08, 0.18, 1.6), "gold_engraved", pos=(0.76, 0, -0.1))
-    s.box((0.08, 1.05, 0.18), "gold_engraved", pos=(0.76, 0, 0.3))
-    weapons.gem(s, (0.82, 0, 0.3), 0.16, axis="x")
-    for sy in (1, -1):
-        for k in range(3):
-            s.spike((0.74, sy * (0.45 + 0.08 * k), 0.85), (0.2, sy * (0.8 - 0.2 * k), 0.6 + 0.3 * k), 0.5 - 0.08 * k,
-                    0.06, "gold", sides=4)
-
-
 def plume(seed, count=9, pad=0.3, length=1.0):
     pl = hair.HairBuilder(seed)
     pl.chunky = True
@@ -721,104 +691,156 @@ def plume(seed, count=9, pad=0.3, length=1.0):
     return pl.finish()
 
 
-WHITE = {"plate_dark": "plate_white", "plate_mid": "blade", "plate_corrupt": "plate_white",
-         "plate_trim": "gold_engraved", "leather_strap": "gold", "leather": "cloth_white", "buckle": "gold",
-         "cloth": "cloth_white", "cloth_dark": "cloth_royal", "horn": "gold"}
-BLACK = {"plate_dark": "plate_black", "plate_mid": "plate_dark", "plate_corrupt": "plate_black",
-         "plate_trim": "gold", "leather_strap": "plate_black", "leather": "plate_black", "buckle": "gold",
-         "cloth": "cloth_royal", "cloth_dark": "cloth_royal", "horn": "plate_black"}
-STEEL = {"plate_dark": "blade", "plate_mid": "plate_trim", "plate_corrupt": "blade", "plate_trim": "gold",
-         "cloth": "cloth_royal", "cloth_dark": "cloth_royal", "buckle": "gold"}
-PALADIN = {"plate_dark": "plate_white", "plate_mid": "blade", "plate_corrupt": "plate_corrupt_heavy",
-           "plate_trim": "gold_engraved", "cloth": "cloth_white", "cloth_dark": "cloth_white", "leather_strap": "gold",
-           "leather": "cloth_white", "buckle": "gold"}
-
-
 def white_knight():
-    """The White Knight: white-and-gold parade plate, a red cape, a winged helm, a holy
-    greatsword and a royal shield."""
+    """The White Knight: polished white plate piped in gold, a winged helm, a blue-gem
+    sunburst on the chest, a crimson cape, a long holy greatsword and a great shield."""
     ch = Character("KnightWhite", glow=GOLD_GLOW, weapon="RadiantGreatsword", shield=True)
     ch.painter = armored_painter(61, (128, 136, 130), (225, 220, 210), iris=(255, 200, 90))
-    o = elite.elite_onehorn(ch.name, 0.3, horn=False, crest=True, head_crystals=False, chest_v=False,
-                            crystals=0.25, regal=True)
-    remap_tiles(o, WHITE)
-    o.glow = GOLD_GLOW
-    h = o("Head")
-    gold_wings(h)
-    weapons.gem(h, (0, -0.86, 0.45), 0.1)
-    chest_emblem(o)
-    royal_cape(o, "cloth_royal", lining="cloth_white")
-    royal_shield(o)
-    ch.outfit = o
+    ch.outfit = parade.parade_knight(ch.name, "white", glow=GOLD_GLOW, seed=61)
+    parade.parade_shield(ch.outfit)
     return ch
 
 
 def black_knight():
-    """The Black Knight: black-and-gold plate, a horned helm with back-swept spikes, a long
-    red cape and a pair of huge black greatswords."""
+    """The Black Knight (after Momon): sleek black muscle-cuirass plate traced with gold,
+    gold knee cops, a bladed helm and pauldrons, a full crimson cape and two enormous
+    greatswords, one in each hand."""
     ch = Character("KnightBlack", glow=CRIMSON, weapon="AbyssGreatsword")
     ch.painter = armored_painter(62, (120, 126, 124), (34, 30, 36), iris=(255, 60, 70))
-    o = elite.elite_onehorn(ch.name, 0.5, horn=False, twin_horns=1.0, head_crystals=False, chest_v=True,
-                            crystals=0.3, regal=True)
-    remap_tiles(o, BLACK)
-    o.glow = CRIMSON
-    h = o("Head")
-    for s in (1, -1):  # back-swept helm spikes with gold edges
-        for k in range(3):
-            h.spike((s * 0.6, 0.0 + 0.2 * k, 0.5 - 0.12 * k), (s * 0.35, 1, 0.55 - 0.1 * k), 1.4 - 0.25 * k,
-                    0.1, "plate_black", sides=4)
-            h.spike((s * 0.62, -0.02 + 0.2 * k, 0.53 - 0.12 * k), (s * 0.35, 1, 0.55 - 0.1 * k), 0.8 - 0.15 * k,
-                    0.05, "gold", sides=4)
-    for side, sx in (("Left", 1), ("Right", -1)):  # spiked pauldron crests
-        for k in range(3):
-            o(side + "UpperArm").spike((sx * (0.45 + 0.15 * k), -0.3 + 0.3 * k, 0.85), (sx * 0.6, 0, 1), 0.55,
-                                       0.09, "plate_black", sides=4)
-        band(o(side + "UpperArm"), 0.08, 0.16, 0.92, 0.86, 0.26, "gold")
-    royal_cape(o, "cloth_royal", length=4.7, width=1.25, clasp="gold")
-    ch.outfit = o
+    ch.outfit = parade.parade_knight(ch.name, "black", glow=CRIMSON, seed=62)
     return ch
 
 
 def royal_guard():
-    """Royal Guard (formerly the Noble): polished steel and gold, a red tabard and cape, a
-    tall crimson plume and a gilded halberd."""
+    """Royal Guard: polished steel and gold, a gold cross on the chest, a crimson tabard,
+    cape and plume, and a towering halberd."""
     ch = Character("KnightRoyalGuard", weapon="RoyalHalberd")
-    ch.painter = armored_painter(63, (132, 140, 134), (120, 26, 40), iris=(210, 90, 255))
-    o = elite.elite_onehorn(ch.name, 0.4, horn=False, crest=True, head_crystals=False, chest_v=True,
-                            crystals=0.4, regal=True)
-    remap_tiles(o, STEEL)
-    royal_cape(o, "cloth_royal", length=4.0, width=1.1)
-    ch.outfit = o
-    ch.hairs.append(("Head", "Plume", plume(64, pad=0.32, length=1.2),
+    ch.painter = armored_painter(63, (132, 140, 134), (120, 26, 40))
+    ch.outfit = parade.parade_knight(ch.name, "guard", seed=63)
+    ch.hairs.append(("Head", "Plume", plume(64, pad=0.36, length=1.3),
                      ((190, 30, 45), (110, 14, 26), (245, 110, 110))))
     return ch
 
 
 def paladin():
-    """Paladin of the Eye (formerly the Priest): white-gold plate cracked with corruption, a
-    radiant halo with crystal rays, a glowing eye on the chest and an eye warhammer."""
+    """Paladin of the Eye: white-and-gold plate with corrupted lames, a horn and a halo of
+    crystal rays, a glowing eye on the chest and a colossal eye maul."""
     ch = Character("KnightPaladin", weapon="EyeWarhammer")
     ch.painter = armored_painter(65, (126, 132, 130), (230, 226, 220))
-    o = elite.elite_onehorn(ch.name, 0.7, horn=True, crest=False, head_crystals=True, chest_v=False,
-                            crystals=0.6, regal=True)
-    remap_tiles(o, PALADIN)
-    h, g = o("Head"), o("Head", "Glow")
-    for k in range(16):  # halo ring behind the head
-        a = 2 * math.pi * k / 16
-        h.box((0.1, 0.08, 0.32), "gold_engraved", pos=(1.05 * math.cos(a), 1.0, 0.35 + 1.05 * math.sin(a)),
-              rot=(0, -math.degrees(a) + 90, 0))
-    for k in range(8):  # crystal rays
-        a = 2 * math.pi * (k + 0.5) / 8
-        g.spike((1.12 * math.cos(a), 1.0, 0.35 + 1.12 * math.sin(a)), (math.cos(a), 0.0, math.sin(a)),
-                0.45 if k % 2 else 0.3, 0.06, "glow", sides=4)
-    t, tg = o("UpperTorso"), o("UpperTorso", "Glow")
-    for k in range(12):  # gold ring around the chest eye
-        a = 2 * math.pi * k / 12
-        t.box((0.06, 0.06, 0.13), "gold", pos=(0.3 * math.cos(a), -0.8, 0.35 + 0.22 * math.sin(a)),
-              rot=(0, -math.degrees(a) + 90, 0))
-    tg.box((0.42, 0.05, 0.1), "glow", pos=(0, -0.81, 0.35))
-    tg.box((0.18, 0.06, 0.18), "glow", pos=(0, -0.82, 0.35), rot=(0, 45, 0))
-    royal_cape(o, "cloth_white", lining="cloth_royal")
+    ch.outfit = parade.parade_knight(ch.name, "paladin", seed=65)
+    return ch
+
+
+# ---------------------------------------------------------------------------
+# Elites of the heavily infected: villagers and ordinary knights the corruption has
+# almost consumed. Darker, cracked all over, crystals bursting out of them.
+BLIGHT = (215, 90, 255)
+
+
+def glow_eye(o):
+    g = o("Head", "Glow")
+    g.box((0.58, 0.04, 0.075), "glow", pos=(0, -0.625, 0.04))
+    g.box((0.2, 0.05, 0.2), "glow", pos=(0, -0.63, 0.04), rot=(0, 45, 0))
+
+
+def blighted_skin(p, skin, count=6, seed=0):
+    rnd = random.Random(seed)
+    for part in style2.PARTS:
+        for f in FACES:
+            if f == "front" and part == "Head":
+                continue
+            p.cracks(part, f, (30, 10, 40), BLIGHT, count=count, seed=rnd.randint(0, 999))
+    p.cracks("Head", "front", (30, 10, 40), BLIGHT, count=2, seed=seed)
+
+
+def villager_blighted():
+    """Blighted farmer: grey-violet skin cracked everywhere, rags, crystals erupting from
+    the back and shoulders, a crystal-edged reaper's scythe."""
+    ch = Character("VillagerBlighted", glow=BLIGHT, weapon="BlightScythe")
+    skin = (92, 80, 104)
+    p = Painter(seed=81)
+    skin_all(p, skin)
+    muscles(p, skin)
+    shirt(p, (110, 98, 80), sleeves="short")
+    for f in SIDES4:  # torn shirt
+        p.poly("UpperTorso", f, [(0, 0.55), (0.2, 0.75), (0.35, 0.6), (0.55, 0.85), (0.75, 0.62), (1, 0.8), (1, 1), (0, 1)],
+               skin)
+    pants(p, (70, 56, 46), belt=(50, 36, 26))
+    for part in ("LeftLowerLeg", "RightLowerLeg"):
+        for f in SIDES4:
+            p.poly(part, f, [(0, 0.3), (0.25, 0.45), (0.5, 0.3), (0.75, 0.5), (1, 0.32), (1, 1), (0, 1)], skin)
+    blighted_skin(p, skin, 6, 81)
+    king_face(p, skin)
+    boots(p, (44, 34, 30), height=0.3)
+    p.shade()
+    ch.painter = p
+    ch.hairs.append(("Head", "Hair", hair.shaggy(31), ((40, 30, 44), (20, 14, 24), (110, 80, 130))))
+    o = ch.outfit
+    glow_eye(o)
+    o.crystals("UpperTorso", 12, (0.0, 0.6, 0.3), (0.7, 0.05, 0.4), (0, 1, 0.6), length=(0.5, 1.4),
+               radius=(0.08, 0.17))
+    o.crystals("LeftUpperArm", 8, (0.55, 0, 0.5), (0.15, 0.35, 0.2), (1, 0, 0.9), length=(0.4, 1.1),
+               radius=(0.07, 0.14))
+    o.crystals("RightLowerArm", 5, (-0.55, 0, 0.1), (0.05, 0.35, 0.3), (-1, 0, 0.4), length=(0.3, 0.7),
+               radius=(0.05, 0.1))
+    o.crystals("Head", 4, (0.35, 0.2, 0.55), (0.2, 0.3, 0.05), (0.6, 0.3, 1), length=(0.3, 0.6),
+               radius=(0.05, 0.09))
+    return ch
+
+
+def woodcutter_blighted():
+    """Blighted brute: a bare-chested woodcutter whose left arm has become a fist of
+    crystal, with a crystal-headed maul."""
+    ch = Character("WoodcutterBlighted", glow=BLIGHT, weapon="CrystalMaul")
+    ch.sculpt = prince_bumps()
+    skin = (86, 76, 98)
+    p = Painter(seed=82)
+    skin_all(p, skin)
+    muscles(p, skin)
+    pants(p, (62, 36, 40), belt=(48, 34, 24))
+    for u in (0.3, 0.7):
+        p.line("UpperTorso", "front", [(u, 0.0), (u, 0.5)], (60, 40, 26), width=18)
+    blighted_skin(p, skin, 7, 82)
+    king_face(p, skin)
+    boots(p, (50, 36, 26), height=0.55, cuff=(40, 36, 34))
+    p.shade()
+    ch.painter = p
+    ch.hairs.append(("Head", "Hair", hair.knot_v3(32), ((34, 26, 30), (18, 12, 16), (100, 80, 110))))
+    ch.hairs.append(("Head", "Beard", hair.beard_v3(33), ((34, 26, 30), (18, 12, 16), (100, 80, 110))))
+    o = ch.outfit
+    glow_eye(o)
+    # The crystal fist: the left forearm and hand encased in a cluster.
+    o.crystals("LeftLowerArm", 14, (0.2, 0.0, -0.1), (0.4, 0.4, 0.45), (1, 0, 0.2), length=(0.4, 1.0),
+               radius=(0.1, 0.2))
+    o.crystals("LeftHand", 10, (0.0, 0.0, -0.2), (0.35, 0.35, 0.1), (0, 0, -1), length=(0.3, 0.8),
+               radius=(0.1, 0.18))
+    o.crystals("LeftUpperArm", 8, (0.5, 0, 0.45), (0.15, 0.35, 0.2), (1, 0, 0.9), length=(0.5, 1.2),
+               radius=(0.08, 0.16))
+    o.crystals("UpperTorso", 12, (0.0, 0.6, 0.35), (0.75, 0.05, 0.35), (0, 1, 0.7), length=(0.6, 1.6),
+               radius=(0.09, 0.19))
+    return ch
+
+
+def knight_blighted(axe=False):
+    """Blighted knights: ordinary knights whose armour the crystal has split open."""
+    name = "KnightBlightedAxe" if axe else "KnightBlighted"
+    ch = Character(name, glow=BLIGHT, weapon="CrystalWarAxe" if axe else "BlightGreatsword")
+    ch.painter = armored_painter(83 + axe, (96, 84, 108), (40, 30, 44))
+    o = elite.elite_onehorn(name, 1.0, horn=axe, twin_horns=0.0 if axe else 0.7, head_crystals=True,
+                            chest_v=True, crystals=2.4, right_crystals=True)
+    remap_tiles(o, {"plate_dark": "plate_corrupt_heavy", "plate_mid": "plate_corrupt", "plate_trim": "plate_mid",
+                    "cloth": "cloth_dark"} if axe else
+                {"plate_dark": "plate_corrupt", "plate_mid": "plate_corrupt_heavy", "plate_trim": "iron"})
+    o.glow = BLIGHT
+    o.crystals("UpperTorso", 10, (0.0, 0.75, 0.3), (0.7, 0.05, 0.4), (0, 1, 0.7), length=(0.5, 1.4),
+               radius=(0.08, 0.17))
+    o.crystals("Head", 5, (0.0, 0.3, 0.8), (0.4, 0.3, 0.05), (0, 0.3, 1), length=(0.4, 0.9), radius=(0.06, 0.11))
+    for side, sx in (("Left", 1), ("Right", -1)):
+        o.crystals(side + "UpperLeg", 3, (sx * 0.62, 0, 0.1), (0.05, 0.4, 0.4), (sx, 0, 0.4), length=(0.25, 0.55),
+                   radius=(0.05, 0.1))
+        o.crystals(side + "LowerLeg", 2, (sx * 0.62, 0, 0.0), (0.05, 0.3, 0.3), (sx, 0, 0.3), length=(0.2, 0.45),
+                   radius=(0.05, 0.08))
+    common.back_cloth(o, "cloth_dark", top=0.85, length=2.4, width=1.0, y=0.85)
     ch.outfit = o
     return ch
 
@@ -935,6 +957,7 @@ ROSTER = {
                lambda: knight("high", 0.9, "KnightHigh", "HighAxe", 23)],
     "court": [white_knight, black_knight, royal_guard, paladin, general],
     "army": [spearman, lambda: spearman(True), wolf_handler, wolf_knight],
+    "elite": [villager_blighted, woodcutter_blighted, knight_blighted, lambda: knight_blighted(True)],
     "boss": [cyclops_prince, cyclops_king, lambda: cyclops_king(sculpted=True)],
 }
 
@@ -1291,6 +1314,33 @@ def preview_user_hair(head):
     return hair_obj
 
 
+SPACING = {"court": 6.4, "elite": 6.0, "boss": 6.0}
+
+
+def pose_weapons(ch, objs, mats, k):
+    """Weapons for the lineup renders. Long weapons are raised beside the body so their
+    full length reads from the front; a dual wielder's second blade hangs low in the left
+    hand, like the Black Knight's reference pose."""
+    w = {x.name: x for x in weapons.all_weapons()}[ch.weapon]
+    length = max(v.co.z for piece in w.pieces.values() for v in piece.bm.verts)
+    for piece in w.pieces.values():
+        piece.bm.free()
+    raised = length > 4.5 or w.dual
+    out = []
+    for side, aim in (("Right", (-0.3, -0.15, 1) if raised else (-0.15, -0.8, -0.55)),
+                      ("Left", (0.55, -0.25, -0.8))):
+        if side == "Left" and not w.dual:
+            break
+        hand = next(o for o in objs if o.name.endswith(side + "Hand_Body")).matrix_world.translation
+        copy = tint_glow(build_all.held_weapon(weapons, ch.weapon, mats, hand, k), w.glow)
+        m = (Matrix.Translation(hand + Vector((0, -0.1, 0))) @ Matrix.Scale(k, 4)
+             @ Vector(aim).to_track_quat("Z", "Y").to_matrix().to_4x4())
+        for o in copy:
+            o.matrix_world = m
+        out += copy
+    return out
+
+
 def render_lineups(built, weapon_objs, mats):
     scene, cam = build_all.setup_scene()
     scene.view_settings.view_transform = "Standard"
@@ -1299,26 +1349,16 @@ def render_lineups(built, weapon_objs, mats):
         shown, x = [], 0.0
         for ch, objs in members:
             k = scales.get(ch.name, 1.0)
-            offset = Vector((x + 2.3 * k, 0, 0))
+            offset = Vector((x + SPACING.get(group, 4.6) / 2 * k, 0, 0))
             build_all.place(objs, offset, k)
             shown += objs
             if ch.weapon:
-                hand = next(o for o in objs if o.name.endswith("RightHand_Body")).matrix_world.translation
-                w = {x.name: x for x in weapons.all_weapons()}[ch.weapon]
-                held = tint_glow(build_all.held_weapon(weapons, ch.weapon, mats, hand + Vector((0, -0.1, 0)), k),
-                                 w.glow)
-                shown += held
-                if w.dual:  # the off-hand copy, mirrored into the left hand
-                    lhand = next(o for o in objs if o.name.endswith("LeftHand_Body")).matrix_world.translation
-                    off = tint_glow(build_all.held_weapon(weapons, ch.weapon, mats, lhand + Vector((0, -0.1, 0)), k),
-                                    w.glow)
-                    for o in off:
-                        o.matrix_world = Matrix.Translation(lhand + Vector((0, -0.1, 0))) @ Matrix.Scale(k, 4) @ \
-                            Vector((0.15, -0.8, -0.55)).to_track_quat("Z", "Y").to_matrix().to_4x4()
-                    shown += off
-            x += 4.6 * k
+                shown += pose_weapons(ch, objs, mats, k)
+            x += SPACING.get(group, 4.6) * k
         build_all.set_visible(bpy.data.objects, shown)
-        top = 6.8 * max(scales.get(c.name, 1.0) for c, _ in members)
+        bpy.context.view_layer.update()
+        top = max(6.8 * max(scales.get(c.name, 1.0) for c, _ in members),
+                  max((o.matrix_world @ Vector(c)).z for o in shown for c in o.bound_box) + 0.4)
         center = (x / 2, 0, top / 2 - 0.2)
         if group == "boss":
             # One close-up per King; the buyer's own hair is shown here as a preview only.
