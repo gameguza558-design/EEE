@@ -9,6 +9,7 @@ build ด้วย `python3 cyclops/roster2.py` (ไฟล์อยู่ที�
 ![stage2](renders/r15_stage2_front.png)
 ![court](renders/r15_court_front.png)
 ![army](renders/r15_army_front.png)
+![prince](renders/r15_CyclopsPrince_hero.png)
 ![boss](renders/r15_CyclopsKing_hero.png)
 ![boss3d](renders/r15_CyclopsKing3D_hero.png)
 ![weapons](renders/r15_weapons.png)
@@ -31,18 +32,24 @@ build ด้วย `python3 cyclops/roster2.py` (ไฟล์อยู่ที�
 | ด่าน 2 | `WolfKnight` อัศวินหมาป่า | `SerratedSword` หรือ `SerratedSpear` (ฟันเลื่อย) |
 | กองทัพ | `Spearman` พลหอก | `Spear` |
 | กองทัพ | `SpearmanShield` พลหอกโล่ | `Spear` + `CyclopsShield = true` (โล่ทาวเวอร์) |
-| ราชสำนัก | `Noble` ขุนนาง | `Rapier` |
-| ราชสำนัก | `Aristocrat` ชนชั้นสูง (หมวกทรงสูง + แว่นตาเดียว) | `CaneSword` |
-| ราชสำนัก | `Priest` บาทหลวง | `EyeStaff` |
+| ราชสำนัก | `KnightWhite` อัศวินขาว (เกราะขาวทอง หมวกปีก ผ้าคลุมแดง) | `RadiantGreatsword` + `CyclopsShield = true` (โล่ขาวทองฝังทับทิม) |
+| ราชสำนัก | `KnightBlack` อัศวินดำ (เกราะดำทอง หมวกเขาแหลม ผ้าคลุมแดง) | `AbyssGreatsword` (ถือคู่ สองมือ) |
+| ราชสำนัก | `KnightRoyalGuard` ราชองครักษ์ (แทนขุนนาง) | `RoyalHalberd` |
+| ราชสำนัก | `KnightPaladin` อัศวินศักดิ์สิทธิ์แห่งดวงตา (แทนบาทหลวง มีวงรัศมี) | `EyeWarhammer` |
 | ราชสำนัก | `General` นายพล | `DragonSlayer` (ดาบมหึมา) |
+| รองบอส | `CyclopsPrince` เจ้าชายไซคลอปส์ (ผิวกรมท่า รอยร้าวฟ้าเรือง ตาที่อก มงกุฎ) | `EclipseSaber` |
 | บอส | `CyclopsKing` ราชา (กล้ามวาด) | มือเปล่า |
 | บอส | `CyclopsKing3D` ราชา (ซิกแพ็กและอกนูนเป็น 3D จริง) | มือเปล่า |
 
 **อาวุธฟันเลื่อย** (`Serrated*`) ทำให้ติดสถานะเลือดไหล: เสียเลือด 3 ทุก 0.5 วินาที นาน 4 วินาที
 ระหว่างนั้น Humanoid จะมี attribute `Bleeding = true` (ปรับค่าได้ที่ `Kit.BLEED_*`)
 
-**ผมของราชา:** ใช้ผมที่คุณซื้อใน catalog ด้วย Asset ID ใส่ attribute
-`CyclopsAccessories = "<asset id>"` บน NPC ราชา ระบบจะโหลดผมมาใส่ และซ่อนผมสำรองของชุดให้เอง
+**ถือดาบคู่:** อาวุธที่มี `dual = true` (`AbyssGreatsword`) จะมีอีกเล่มที่มือซ้ายตอนถืออยู่
+ฟันพร้อมกันและทำดาเมจเท่ากัน
+
+**ผม:** ทุกตัวมีผม mesh ของตัวเอง (กระจุกใหญ่ ซ้อนเป็นชั้นแบบอนิเมะ) ราชามีผมทรงซูเปอร์ไซย่าสีชมพู
+ถ้าอยากใช้ผมที่ซื้อใน catalog แทน ใส่ attribute
+`CyclopsAccessories = "<asset id>"` บน NPC ระบบจะโหลดผมมาใส่ ย้อมสีให้เข้ากับตัว และซ่อนผมของชุดให้เอง
 (ไม่ใส่ mesh ผมลงในไฟล์ของเรา เพราะสิทธิ์ที่ได้จากการซื้อคือสิทธิ์สวมใส่ ไม่ใช่สิทธิ์แจกจ่าย mesh)
 
 **อัศวินแต่ละระดับใช้อาวุธได้ 3 แบบ:** ขวาน ดาบ หรือดาบกับโล่

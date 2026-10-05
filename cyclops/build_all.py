@@ -88,7 +88,7 @@ def lua_outfit(outfit, objs):
 def lua_weapon(weapon, objs):
     lines = [f'\t\t{weapon.name} = {{',
              f'\t\t\tdamage = {weapon.damage}, cooldown = {weapon.cooldown}, twoHanded = {str(weapon.two_handed).lower()},'
-             f' bleed = {str(getattr(weapon, "bleed", False)).lower()},',
+             f' bleed = {str(getattr(weapon, "bleed", False)).lower()}, dual = {str(getattr(weapon, "dual", False)).lower()},',
              f'\t\t\tglow = {lua_color(weapon.glow)},',
              f'\t\t\tgrip = CFrame.Angles({", ".join(f"math.rad({a})" for a in weapon.grip)}),',
              '\t\t\tpieces = {']
@@ -195,7 +195,7 @@ WEAPON_OF = {
     "EliteOneHorn": "OneHornGreatsword", "KnightApprenticeInfected": "ApprenticeAxe",
     "KnightMid": "MidSword", "KnightHigh": "HighAxe",
 }
-SIDEWAYS = {"HunterBow", "WoodcutterAxe", "ApprenticeAxe", "MidAxe", "HighAxe"}
+SIDEWAYS = {"HunterBow", "WoodcutterAxe", "ApprenticeAxe", "MidAxe", "HighAxe", "RoyalHalberd", "SerratedCleaver"}
 
 
 def build_weapon_objects(weapon, mats):

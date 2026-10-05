@@ -1,7 +1,7 @@
 """Hand-painted-style texture atlas shared by every corrupted cyclops, generated with
 numpy + Pillow.
 
-The atlas is a 6x6 grid of 170 px tiles (1024 px image). Every face of the model is mapped onto the
+The atlas is a 7x7 grid of 146 px tiles (1024 px image). Every face of the model is mapped onto the
 whole tile of its material, so each tile is painted like a single armor plate: a
 beveled edge, a dark seam, corner rivets, scratches and grime toward the bottom.
 """
@@ -10,7 +10,7 @@ import math
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
-GRID = 6
+GRID = 7
 ATLAS = 1024
 TS = ATLAS // GRID  # tile size in px
 K = TS / 256  # scale for sizes tuned at 256 px
@@ -22,6 +22,9 @@ TILES = [
     "skin", "skin_corrupt", "skin_king", "hair", "eye", "fur",
     "cloth_brown", "cloth_green", "linen", "quilt", "wood", "iron",
     "pants", "shield", "fur_dark", "rope", "plate_corrupt_heavy", "bone",
+    # Luxury knights and the Prince.
+    "plate_white", "plate_black", "plate_navy", "cloth_royal", "cloth_white", "blade_dark",
+    "gem", "gold_engraved",
 ]
 
 PURPLE = np.array([0.72, 0.30, 1.0])
@@ -151,6 +154,52 @@ def plate(rng, color, corrupt=False, rivet=True):
     if corrupt:
         t = veins(t, rng)
     return t
+
+
+def inlay(t, color=(0.85, 0.66, 0.26), inset=10, width=4):
+    """Thin gold line inset along the tile edge: the trim of parade armour."""
+    border = np.minimum(np.minimum(XX, TS - 1 - XX), np.minimum(YY, TS - 1 - YY))
+    m = ((border >= inset * K) & (border < (inset + width) * K)).astype(np.float32)[..., None]
+    return t * (1 - m) + np.array(color, np.float32) * m
+
+
+def ornate_plate(rng, color, trim=(0.85, 0.66, 0.26), shine=0.22):
+    """Polished parade plate: smooth, a strong top highlight, a gold inlay border."""
+    t = solid(color)
+    t = shade(t, fbm(rng) * 0.06)
+    t = shade(t, np.clip(1 - YY / (TS * 0.55), 0, 1) * shine)  # polished highlight
+    t = scratches(t, rng, 12, 0.06)
+    t = bevel(t, hi=0.22, lo=0.2)
+    return inlay(t, trim)
+
+
+def engraved_gold(rng):
+    t = shade(solid((0.72, 0.55, 0.22)), fbm(rng) * 0.12)
+    img = Image.fromarray((np.clip(t, 0, 1) * 255).astype(np.uint8))
+    d = ImageDraw.Draw(img)
+    for k in range(4):  # scrollwork
+        cy = (k + 0.5) * TS / 4
+        for sgn in (1, -1):
+            pts = [(TS / 2 + sgn * (6 + 30 * K * math.cos(a / 4)), cy + 10 * K * math.sin(a / 4)) for a in range(0, 26, 2)]
+            d.line(pts, fill=(120, 82, 28), width=max(1, int(3 * K)))
+    t = np.asarray(img, np.float32) / 255
+    return bevel(t, hi=0.3, lo=0.25)
+
+
+def gem(rng, color=(0.85, 0.08, 0.16)):
+    cx = np.abs(XX - TS / 2) / (TS / 2)
+    cy = np.abs(YY - TS / 2) / (TS / 2)
+    r = np.clip(cx + cy, 0, 1)  # diamond facets
+    t = np.array(color) * (0.5 + 0.8 * (1 - r))[..., None]
+    t = t + np.clip(1 - np.hypot(XX - TS * 0.35, YY - TS * 0.3) / (TS * 0.12), 0, 1)[..., None] * 0.7
+    return np.clip(t, 0, 1).astype(np.float32)
+
+
+def royal_cloth(rng, color, hem=(0.85, 0.66, 0.26)):
+    t = cloth(rng, color)
+    t = shade(t, 0.06 * np.sin(XX / TS * math.pi * 6))  # velvet folds
+    m = ((YY > TS * 0.86) & (YY < TS * 0.92)).astype(np.float32)[..., None]
+    return t * (1 - m) + np.array(hem, np.float32) * m
 
 
 def leather(rng, color, stitch=True):
@@ -359,6 +408,14 @@ def build_atlas(path, seed=3):
         "rope": rope(rng),
         "shield": shield(rng),
         "bone": grime(shade(solid((0.78, 0.74, 0.64)), fbm(rng) * 0.15), rng, 0.4),
+        "plate_white": ornate_plate(rng, (0.78, 0.8, 0.86)),
+        "plate_black": ornate_plate(rng, (0.07, 0.065, 0.08), shine=0.12),
+        "plate_navy": ornate_plate(rng, (0.1, 0.13, 0.26), trim=(0.3, 0.85, 0.95), shine=0.14),
+        "cloth_royal": royal_cloth(rng, (0.52, 0.04, 0.08)),
+        "cloth_white": royal_cloth(rng, (0.82, 0.8, 0.78)),
+        "blade_dark": shade(blade(rng), -0.5 * np.clip(np.minimum(XX, TS - 1 - XX) / (TS * 0.14), 0, 1)),
+        "gem": gem(rng),
+        "gold_engraved": engraved_gold(rng),
     }
     assert set(tiles) == set(TILES), set(TILES) ^ set(tiles)
     atlas = np.zeros((ATLAS, ATLAS, 3), np.float32)

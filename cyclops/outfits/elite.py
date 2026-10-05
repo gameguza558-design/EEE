@@ -12,7 +12,9 @@ from outfits.common import Outfit
 # the cracked "plate_corrupt" texture and carry the crystals.
 # Variant switches so knights can share the One-Horn's design language.
 CFG = dict(horn=True, twin_horns=0.0, crest=False, head_crystals=True, chest_v=True, crystals=1.0,
-           right_crystals=False)
+           right_crystals=False, regal=False)
+# regal: parade armour for the luxury knights - clean hemlines on the tabard, no pouches
+# and no torn cloth on the back (they wear a full cape instead).
 
 
 def band(p, z0, z1, w, d, c, color, grow=0.0, dx=0.0, dy=0.0, rot=(0, 0, 0)):
@@ -91,8 +93,9 @@ def upper_torso():
     # Back: plate, spine ridge, torn cloth and crossed straps with a buckle.
     a.box((1.8, 0.1, 1.3), "plate_mid", pos=(0, 0.69, 0.12))
     a.box((0.15, 0.1, 1.45), "plate_trim", pos=(0, 0.75, 0.05))
-    a.cloth([-0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75], 0.75,
-            [-0.9, -1.35, -1.0, -1.5, -1.1, -1.4, -0.95], 0.78, "cloth_dark", sag=0.04)
+    if not CFG["regal"]:
+        a.cloth([-0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75], 0.75,
+                [-0.9, -1.35, -1.0, -1.5, -1.1, -1.4, -0.95], 0.78, "cloth_dark", sag=0.04)
     for s in (1, -1):
         a.box((0.22, 0.06, 2.0), "leather_strap", pos=(0, 0.86, 0.05), rot=(0, s * 38, 0))
     a.box((0.28, 0.06, 0.28), "buckle", pos=(0, 0.9, 0.05))
@@ -118,7 +121,7 @@ def lower_torso():
     band(a, -0.36, -0.22, 1.17, 0.69, 0.21, "leather", rot=(0, 7, 0))
     a.box((0.24, 0.08, 0.2), "buckle", pos=(0.5, -0.72, -0.24), rot=(0, 7, 0))
     # Pouches.
-    for s, y in ((1, -0.55), (-1, -0.55), (-1, 0.5)):
+    for s, y in (() if CFG["regal"] else ((1, -0.55), (-1, -0.55), (-1, 0.5))):
         a.box((0.34, 0.26, 0.4), "leather", pos=(s * 0.8, y, -0.22))
         a.box((0.37, 0.29, 0.13), "leather_strap", pos=(s * 0.8, y, -0.04))
     # Chainmail skirt under everything.
@@ -131,6 +134,12 @@ def lower_torso():
                   bottom=(1, 0.88))
     # Tattered tabard front and back, with ragged side strips.
     xs = [-0.58, -0.43, -0.29, -0.14, 0.0, 0.14, 0.29, 0.43, 0.58]
+    if CFG["regal"]:
+        # Banner-like tabard: straight sides ending in a point.
+        front = [-1.7 - 0.45 * (1 - abs(x) / 0.58) for x in xs]
+        a.cloth(xs, -0.15, front, -0.74, "cloth", sag=-0.06)
+        a.cloth(xs, -0.15, [z - 0.15 for z in front], 0.74, "cloth_dark", sag=0.06)
+        return a, g
     a.cloth(xs, -0.15, [-1.55, -1.9, -1.62, -2.05, -1.72, -2.0, -1.6, -1.85, -1.5], -0.74,
             "cloth", sag=-0.06)
     a.cloth(xs, -0.15, [-1.75, -2.1, -1.85, -2.2, -1.9, -2.15, -1.8, -2.05, -1.7], 0.74,

@@ -19,7 +19,7 @@
 		  accessory that replaces the hair also hides the outfit's own "Head_Hair" piece.
 		  accessoryColor (Color3, optional): recolour them; outfits like the King have a
 		  default hairTint so bought hair blends with the body.
-		Kit.makeWeapon(weaponName) -> Tool
+		Kit.makeWeapon(weaponName) -> Tool   (weapons with dual = true also put a copy in the left hand)
 		Kit.equip(character, weaponName) -> Tool    (NPCs hold it, players get it in the Backpack)
 		Kit.spawnCreature(creatureName, cframe) -> clone of the rigged wolf, standing at cframe
 ]]
@@ -164,7 +164,7 @@ end
 
 -- Load catalog accessories (hair, etc.) by asset ID and put them on the character.
 -- InsertService can load assets the game's creator owns or that Roblox allows.
--- Recolour a loaded accessory so it matches the outfit (e.g. the King's pale lilac hair).
+-- Recolour a loaded accessory so it matches the outfit (e.g. the King's pink mane).
 -- Works for MeshPart and SpecialMesh handles; a SurfaceAppearance (fixed PBR textures)
 -- is removed because it cannot be recoloured.
 function Kit.tintAccessory(accessory, color)
@@ -274,12 +274,15 @@ local function hookMelee(tool, info)
 		end
 	end
 
-	for _, part in tool:GetDescendants() do
-		if part:IsA("BasePart") then
-			part.CanTouch = true
-			part.Touched:Connect(onTouched)
+	local function addParts(parts)
+		for _, part in parts do
+			if part:IsA("BasePart") then
+				part.CanTouch = true
+				part.Touched:Connect(onTouched)
+			end
 		end
 	end
+	addParts(tool:GetDescendants())
 
 	-- Players trigger this by clicking; NPC scripts call tool:Activate().
 	tool.Activated:Connect(function()
@@ -299,25 +302,20 @@ local function hookMelee(tool, info)
 		task.wait(info.cooldown * 0.4)
 		canSwing = true
 	end)
+	return addParts
 end
 
-function Kit.makeWeapon(weaponName)
+-- Builds a weapon's parts with the grip origin at `base`; returns the handle (the
+-- other pieces are welded to it). Used for the Tool and for a dual wielder's off-hand copy.
+local function buildWeaponParts(weaponName, base, parent)
 	local info = Data.weapons[weaponName]
-	assert(info, `CyclopsKit: unknown weapon {weaponName}`)
 	local folder = asset("Weapons", weaponName)
-
-	local tool = Instance.new("Tool")
-	tool.Name = weaponName
-	tool.CanBeDropped = false
-	tool:SetAttribute("Damage", info.damage)
-	tool:SetAttribute("TwoHanded", info.twoHanded)
-
 	local handleInfo = info.pieces.Handle
 	local handle = folder.Handle:Clone()
 	prepare(handle, false)
 	handle.Size = handleInfo.size
-	handle.CFrame = CFrame.new()
-	handle.Parent = tool
+	handle.CFrame = base * CFrame.new(handleInfo.offset)
+	handle.Parent = parent
 	for _, template in folder:GetChildren() do
 		local piece = info.pieces[template.Name]
 		if template.Name == "Handle" or not piece or not template:IsA("BasePart") then
@@ -326,16 +324,62 @@ function Kit.makeWeapon(weaponName)
 		local part = template:Clone()
 		prepare(part, true)
 		part.Size = piece.size
-		part.CFrame = handle.CFrame * CFrame.new(piece.offset - handleInfo.offset)
+		part.CFrame = base * CFrame.new(piece.offset)
 		if string.match(template.Name, "Glow$") then
 			glowify(part, info.glow, false)
 		end
 		weld(handle, part)
-		part.Parent = tool
+		part.Parent = parent
 	end
+	return handle
+end
+
+function Kit.makeWeapon(weaponName)
+	local info = Data.weapons[weaponName]
+	assert(info, `CyclopsKit: unknown weapon {weaponName}`)
+
+	local tool = Instance.new("Tool")
+	tool.Name = weaponName
+	tool.CanBeDropped = false
+	tool:SetAttribute("Damage", info.damage)
+	tool:SetAttribute("TwoHanded", info.twoHanded)
+	tool:SetAttribute("Dual", info.dual == true)
+
+	local handleInfo = info.pieces.Handle
+	local handle = buildWeaponParts(weaponName, CFrame.new(-handleInfo.offset), tool)
+	handle.Name = "Handle"
 	-- The model's origin is where the hand holds it.
 	tool.Grip = CFrame.new(-handleInfo.offset) * info.grip
-	hookMelee(tool, info)
+	local addParts = hookMelee(tool, info)
+
+	if info.dual then
+		-- Dual wielders: a second copy in the left hand while the tool is equipped. It
+		-- swings with the main weapon (same damage, same Activated).
+		local offhand
+		tool.Equipped:Connect(function()
+			local character = tool.Parent
+			local hand = character and character:FindFirstChild("LeftHand")
+			if not hand then
+				return
+			end
+			local grip = hand:FindFirstChild("LeftGripAttachment")
+			offhand = Instance.new("Model")
+			offhand.Name = weaponName .. "Offhand"
+			local base = hand.CFrame * (grip and grip.CFrame or CFrame.new(0, -hand.Size.Y / 2, 0)) * info.grip:Inverse()
+			local h = buildWeaponParts(weaponName, base, offhand)
+			h.Massless = true
+			offhand.PrimaryPart = h
+			offhand.Parent = character
+			weld(hand, h)
+			addParts(offhand:GetDescendants())
+		end)
+		tool.Unequipped:Connect(function()
+			if offhand then
+				offhand:Destroy()
+				offhand = nil
+			end
+		end)
+	end
 	return tool
 end
 

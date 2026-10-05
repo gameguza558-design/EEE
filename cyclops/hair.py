@@ -85,11 +85,14 @@ class HairBuilder:
                                ((s + 1) / sides, 1 - (r + 1) / rings * 0.4), (s / sides, 1 - (r + 1) / rings * 0.4)])
 
     def clump(self, root_dir, length, width, gravity=0.6, curl=0.0, lift=0.0, thickness=0.35, segments=6,
-              twist=0.0):
-        """One tapered, flattened clump of hair growing from the scalp along root_dir."""
+              twist=0.0, taper=0.7, sink=0.0, aim=None, hug=0.05):
+        """One tapered, flattened clump of hair growing from the scalp along root_dir.
+        taper: how fast it narrows (higher = holds its width, then a sharp point);
+        sink: root pushed into the cap so wide clumps merge into one mass;
+        aim: optional growth direction (otherwise straight out of the scalp)."""
         n = Vector(root_dir).normalized()
-        p = scalp(n, self.pad)
-        direction = (n + Vector((0, 0, lift))).normalized()
+        p = scalp(n, self.pad - sink)
+        direction = (Vector(aim) if aim is not None else n + Vector((0, 0, lift))).normalized()
         side = n.cross(Vector((0, 0, 1)))
         if side.length < 1e-3:
             side = Vector((1, 0, 0))
@@ -101,14 +104,14 @@ class HairBuilder:
             direction = (direction + Vector((0, 0, -gravity * 0.35)) + side * curl * 0.25).normalized()
             p = p + direction * step
             # Keep strands from cutting back into the head.
-            surface = scalp(p - HEAD_CENTER, 0.05)
+            surface = scalp(p - HEAD_CENTER, hug + self.pad - 0.02)
             if (p - HEAD_CENTER).length < (surface - HEAD_CENTER).length:
                 p = surface
             pts.append(p)
         rings = []
         for i, c in enumerate(pts[:-1]):
             t = i / segments
-            w = width * (1 - t) ** 0.7
+            w = width * (1 - t ** 1.6) ** taper if taper > 1 else width * (1 - t) ** taper
             fwd = (pts[i + 1] - c).normalized()
             out = (c - HEAD_CENTER).normalized()
             flat = fwd.cross(out).normalized()  # across the clump
@@ -267,4 +270,188 @@ def king_crown(seed=8):
     return h.finish()
 
 
-STYLES = {"king_crown": king_crown, "king_mane": king_mane, "messy_short": messy_short, "wild_mane": wild_mane, "top_knot": top_knot, "beard": beard}
+# ---------------------------------------------------------------------------
+# v3 styles: few, wide, layered locks (anime hair) instead of many thin spikes.
+def _sym(h, fn, items):
+    """Build mirrored pairs: fn(s, *item) for s in (+1, -1)."""
+    for it in items:
+        for s in (1, -1):
+            fn(s, *it)
+
+
+def swept_short(seed=11, part=1, length=1.0):
+    """Short anime hair: a smooth crown, wide locks over the sides and back, and bangs
+    swept to one side above the eye."""
+    h = HairBuilder(seed)
+    h.chunky = True
+    h.cap(front_cut=0.36, back_low=-0.35)
+    rnd = h.rnd
+    L = length
+    # Crown locks lying back over the head.
+    for k in range(7):
+        lon = math.radians(-60 + 120 * k / 6 + 180)
+        d = Vector((math.sin(lon) * 0.35, -math.cos(lon) * 0.35, 1))
+        h.clump(d, 0.85 * L, 0.42, gravity=1.1, aim=(math.sin(lon) * 0.6, -math.cos(lon) * 0.6 + 0.4, 0.35),
+                thickness=0.45, taper=1.4, sink=0.04, twist=rnd.uniform(-0.3, 0.3), segments=7)
+    # Sides and back: wide locks hanging to the jaw / nape.
+    for k in range(9):
+        lon = math.radians(70 + 220 * k / 8)
+        d = Vector((math.sin(lon), -math.cos(lon), 0.75))
+        h.clump(d, (0.75 + 0.1 * math.sin(k)) * L, 0.4, gravity=1.4, aim=(math.sin(lon) * 0.5, -math.cos(lon) * 0.5, -0.3),
+                thickness=0.45, taper=1.3, sink=0.05, curl=rnd.uniform(-0.3, 0.3), segments=7)
+    # Bangs: four locks from the hairline swept toward `part`, ending above the eye.
+    for k in range(4):
+        x = -0.36 + 0.24 * k
+        root = Vector((x, -0.6, 0.9))
+        h.clump(root, 0.62 - 0.05 * abs(k - 1.5), 0.3, gravity=1.4, aim=(part * 0.9, -0.5, -0.4),
+                thickness=0.4, taper=1.5, sink=0.03, segments=7)
+    # A couple of cowlicks for character.
+    h.clump(Vector((0.1, 0.4, 1)), 0.45, 0.22, gravity=-0.2, aim=(0.2, 0.6, 1), thickness=0.45, taper=1.2)
+    return h.finish()
+
+
+def shaggy(seed=12):
+    """Rough, messy medium hair (wolf handler): wider, uneven locks to the shoulders."""
+    h = HairBuilder(seed)
+    h.chunky = True
+    h.cap(front_cut=0.34, back_low=-0.45)
+    rnd = h.rnd
+    for k in range(8):
+        lon = math.radians(-70 + 140 * k / 7 + 180)
+        d = Vector((math.sin(lon) * 0.4, -math.cos(lon) * 0.4, 1))
+        h.clump(d, rnd.uniform(0.85, 1.05), 0.4, gravity=0.9, aim=(math.sin(lon) * 0.7, -math.cos(lon) * 0.7 + 0.3, 0.4),
+                thickness=0.45, taper=1.3, sink=0.04, twist=rnd.uniform(-0.4, 0.4), curl=rnd.uniform(-0.4, 0.4))
+    for k in range(11):
+        lon = math.radians(60 + 240 * k / 10)
+        d = Vector((math.sin(lon), -math.cos(lon), 0.6))
+        h.clump(d, rnd.uniform(0.9, 1.25), 0.38, gravity=1.3, aim=(math.sin(lon) * 0.7, -math.cos(lon) * 0.7, -0.2),
+                thickness=0.45, taper=1.2, sink=0.05, curl=rnd.uniform(-0.6, 0.6), segments=7)
+    for k in range(5):
+        x = -0.4 + 0.2 * k
+        h.clump(Vector((x, -0.6, 0.9)), rnd.uniform(0.5, 0.65), 0.26, gravity=1.5,
+                aim=((1 if x >= 0 else -1) * 0.6, -0.6, -0.2), thickness=0.4, taper=1.4, sink=0.03)
+    return h.finish()
+
+
+def knot_v3(seed=13):
+    """Shaved sides, slicked top and a thick tied knot (woodcutter)."""
+    h = HairBuilder(seed)
+    h.chunky = True
+    h.cap(front_cut=0.48, back_low=0.05)
+    for k in range(6):
+        lon = math.radians(-50 + 100 * k / 5 + 180)
+        h.clump(Vector((math.sin(lon) * 0.3, -0.5, 1)), 0.7, 0.36, gravity=1.0,
+                aim=(math.sin(lon) * 0.2, 1, 0.3), thickness=0.4, taper=1.3, sink=0.04)
+    # The knot: a tied tail standing up then falling back.
+    h.clump(Vector((0, 0.35, 1)), 0.55, 0.3, gravity=-0.4, aim=(0, 0.3, 1), thickness=0.8, taper=0.5)
+    for s in (1, -1):
+        h.clump(Vector((s * 0.1, 0.45, 1)), 0.75, 0.24, gravity=1.0, aim=(s * 0.4, 0.6, 1), thickness=0.6, taper=1.2,
+                segments=7)
+    return h.finish()
+
+
+def beard_v3(seed=14, length=0.6):
+    """Full beard: wide locks from the cheeks and chin, merging into a forked point."""
+    h = HairBuilder(seed)
+    h.chunky = True
+    for i in range(9):
+        a = math.radians(-75 + 150 * i / 8)
+        d = Vector((math.sin(a) * 0.9, -math.cos(a) * 0.9, -0.5))
+        mid = 1 - abs(i - 4) / 4
+        h.clump(d, length * (0.7 + 0.5 * mid), 0.34, gravity=1.4, aim=(math.sin(a) * 0.3, -0.5, -1),
+                thickness=0.5, taper=1.3, sink=0.04, segments=6)
+    return h.finish()
+
+
+def super_mane(seed=21):
+    """Final boss mane: an enormous super-saiyan blaze of long, thick spikes radiating up,
+    out and back in layered tiers, with a few spikes over the brow and long sideburns."""
+    h = HairBuilder(seed)
+    h.chunky = True
+    h.cap(front_cut=0.34, back_low=-0.55)
+    rnd = h.rnd
+
+    def spike(d, aim, length, width, bend=-0.05, thick=0.55, twist=0.0, segs=8):
+        h.clump(d, length, width, gravity=bend, aim=aim, thickness=thick, taper=1.15, sink=0.08,
+                twist=twist + rnd.uniform(-0.25, 0.25), segments=segs)
+
+    # Tier 1: the tallest spikes, up out of the crown and leaning back.
+    for x, ln in ((0.0, 3.1), (0.32, 2.7), (-0.32, 2.7)):
+        spike(Vector((x, 0.0, 1)), (x * 1.3, 0.45, 1), ln, 0.78)
+    # Tier 2: huge spikes sweeping up and back.
+    for k in range(5):
+        a = math.radians(-60 + 120 * k / 4)
+        spike(Vector((math.sin(a) * 0.6, 0.6, 0.8)), (math.sin(a) * 0.8, 1.2, 0.75), rnd.uniform(2.7, 3.1), 0.8)
+    # Tier 3: flaring out to the sides, swept back.
+    for s in (1, -1):
+        spike(Vector((s * 1, 0.1, 0.7)), (s * 1, 0.6, 0.65), 2.4 + rnd.uniform(-0.1, 0.1), 0.72, bend=-0.12)
+        spike(Vector((s * 1, 0.25, 0.25)), (s * 1, 0.8, 0.15), 2.1 + rnd.uniform(-0.1, 0.1), 0.7, bend=-0.08)
+    # Tier 4: the long back mass, straight back, the lower ones drooping a little.
+    for k in range(5):
+        a = math.radians(-60 + 120 * k / 4)
+        spike(Vector((math.sin(a) * 0.8, 1, 0.35)), (math.sin(a) * 0.7, 1, 0.2), rnd.uniform(2.6, 3.0), 0.78, bend=0.0)
+    for k in range(4):
+        a = math.radians(-45 + 90 * k / 3)
+        spike(Vector((math.sin(a) * 0.7, 1, -0.2)), (math.sin(a) * 0.6, 1, -0.2), rnd.uniform(2.0, 2.4), 0.7,
+              bend=0.12)
+    # Nape: spikes pointing down the back of the neck.
+    for k in range(4):
+        a = math.radians(-50 + 100 * k / 3)
+        spike(Vector((math.sin(a) * 0.7, 1, -0.45)), (math.sin(a) * 0.5, 0.8, -0.7), rnd.uniform(1.3, 1.6), 0.55,
+              bend=0.1)
+    # Fillers between the tiers so the silhouette reads as one blazing mass.
+    for k in range(6):
+        a = math.radians(-125 + 250 * k / 5)
+        spike(Vector((math.sin(a) * 0.8, -math.cos(a) * 0.6 + 0.3, 0.9)),
+              (math.sin(a) * 0.8, 0.7, 0.9), rnd.uniform(1.6, 2.0), 0.62)
+    # Brow: three spikes flicking up and forward from the hairline (clear of the eye).
+    for x, ln in ((0.0, 1.3), (0.34, 1.05), (-0.34, 1.05)):
+        spike(Vector((x, -0.6, 1)), (x * 1.5, -0.1, 1), ln, 0.5, bend=-0.15, thick=0.5)
+    # Bangs hanging down beside the eye, and long sideburns past the jaw.
+    for s in (1, -1):
+        h.clump(Vector((s * 0.75, -0.65, 0.7)), 0.8, 0.28, gravity=1.6, aim=(s * 0.8, -0.3, -0.6), thickness=0.5,
+                taper=1.3, sink=0.06, segments=7)
+        h.clump(Vector((s * 0.95, -0.35, 0.35)), 1.25, 0.32, gravity=1.4, aim=(s * 0.45, -0.25, -1), thickness=0.5,
+                taper=1.3, sink=0.06, segments=7)
+    return h.finish()
+
+
+def prince_hair(seed=22):
+    """The Prince: his father's colour, but a sleek mane swept back from the brow and
+    falling past the shoulders, with a few sharp spikes flaring at the back and one long
+    lock across the temple."""
+    h = HairBuilder(seed)
+    h.chunky = True
+    h.cap(front_cut=0.4, back_low=-0.55)
+    rnd = h.rnd
+    # Swept-back top: wide locks from the hairline over the crown.
+    for k in range(7):
+        x = -0.48 + 0.16 * k
+        h.clump(Vector((x, -0.6, 0.9)), 1.3, 0.38, gravity=0.5, aim=(x * 0.6, 1, 0.55), thickness=0.45,
+                taper=1.4, sink=0.05, twist=rnd.uniform(-0.2, 0.2), segments=8, hug=0.08)
+    # Long back: layered locks falling to the shoulder blades.
+    for row, (z, ln) in enumerate(((0.75, 2.2), (0.35, 2.0), (-0.05, 1.7))):
+        for k in range(7):
+            a = math.radians(-75 + 150 * k / 6)
+            h.clump(Vector((math.sin(a) * 0.85, 1, z)), ln + rnd.uniform(-0.15, 0.15), 0.5, gravity=1.7,
+                    aim=(math.sin(a) * 0.4, 0.55, -0.1 - 0.2 * row), thickness=0.45, taper=1.3, sink=0.06,
+                    curl=rnd.uniform(-0.25, 0.25), segments=8)
+    # Royal flare: sharp spikes at the back of the crown, like a smaller version of his father's.
+    for k in range(5):
+        a = math.radians(-50 + 100 * k / 4)
+        h.clump(Vector((math.sin(a) * 0.5, 0.8, 0.85)), rnd.uniform(1.6, 2.0), 0.55, gravity=-0.05,
+                aim=(math.sin(a) * 0.9, 1.3, 0.6), thickness=0.5, taper=1.15, sink=0.08, segments=7)
+    # Sides: locks over the ears to the jaw.
+    for s in (1, -1):
+        for k in range(3):
+            h.clump(Vector((s * 1, -0.3 + 0.3 * k, 0.55)), 1.0 - 0.1 * k, 0.34, gravity=1.4,
+                    aim=(s * 0.5, 0.2 * k, -0.8), thickness=0.45, taper=1.3, sink=0.05, segments=7)
+    # One long lock across the right temple.
+    h.clump(Vector((-0.35, -0.7, 0.8)), 1.15, 0.28, gravity=1.6, aim=(-0.6, -0.6, -0.5), thickness=0.45, taper=1.5,
+            sink=0.04, curl=-0.4, segments=8)
+    return h.finish()
+
+
+STYLES = {"king_crown": king_crown, "king_mane": king_mane, "messy_short": messy_short, "wild_mane": wild_mane, "top_knot": top_knot, "beard": beard,
+          "swept_short": swept_short, "shaggy": shaggy, "knot_v3": knot_v3, "beard_v3": beard_v3,
+          "super_mane": super_mane, "prince_hair": prince_hair}

@@ -16,10 +16,12 @@
 
 	Outfits:  Villager, Hunter, Woodcutter, WolfRider, WolfHandler, KnightApprentice, EliteOneHorn,
 	          KnightApprenticeInfected, KnightMid, KnightHigh, WolfKnight, Spearman, SpearmanShield,
-	          Noble, Aristocrat, Priest, General, CyclopsKing, CyclopsKing3D
+	          KnightWhite, KnightBlack, KnightRoyalGuard, KnightPaladin, General,
+	          CyclopsPrince (sub-boss), CyclopsKing, CyclopsKing3D
 	Weapons:  Pitchfork, Hoe, Spade, Sickle, Scythe, HunterBow, WoodcutterAxe, WolfRiderSpear,
 	          OneHornGreatsword, ApprenticeAxe, ApprenticeSword, MidAxe, MidSword, HighAxe, HighSword,
-	          Spear, Rapier, CaneSword, EyeStaff, DragonSlayer,
+	          Spear, DragonSlayer, RadiantGreatsword, AbyssGreatsword (dual: one in each hand),
+	          RoyalHalberd, EyeWarhammer, EclipseSaber,
 	          SerratedSpear, SerratedSword, SerratedCleaver   (saw-toothed: apply Bleeding)
 ]]
 
