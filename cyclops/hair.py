@@ -53,6 +53,7 @@ class HairBuilder:
         self.uv = self.bm.loops.layers.uv.new("UVMap")
         self.rnd = random.Random(seed)
         self.pad = 0.02  # how far above the head surface clumps start (bigger over helmets)
+        self.chunky = False  # six-sided ridged clumps (thicker anime look)
 
     def _face(self, verts, uvs):
         f = self.bm.faces.new(verts)
@@ -115,18 +116,25 @@ class HairBuilder:
             a = twist * t
             flat, out = flat * math.cos(a) + out * math.sin(a), out * math.cos(a) - flat * math.sin(a)
             th = w * thickness
-            ring = [c + flat * w, c + out * th, c - flat * w, c - out * th * 0.6]
+            if self.chunky:
+                # Six-sided, ridged section: a thick anime clump rather than a flat ribbon.
+                ring = [c + flat * w, c + flat * w * 0.45 + out * th, c - flat * w * 0.45 + out * th * 0.8,
+                        c - flat * w, c - flat * w * 0.4 - out * th * 0.55, c + flat * w * 0.4 - out * th * 0.55]
+            else:
+                ring = [c + flat * w, c + out * th, c - flat * w, c - out * th * 0.6]
             rings.append([self.bm.verts.new(v) for v in ring])
         tip = self.bm.verts.new(pts[-1])
+        n = len(rings[0])
         for i in range(len(rings) - 1):
             a, b = rings[i], rings[i + 1]
             v0, v1 = 1 - i / segments, 1 - (i + 1) / segments
-            for k in range(4):
-                j = (k + 1) % 4
-                self._face([a[k], a[j], b[j], b[k]], [(k / 4, v0), ((k + 1) / 4, v0), ((k + 1) / 4, v1), (k / 4, v1)])
+            for k in range(n):
+                j = (k + 1) % n
+                self._face([a[k], a[j], b[j], b[k]], [(k / n, v0), ((k + 1) / n, v0), ((k + 1) / n, v1), (k / n, v1)])
         last = rings[-1]
-        for k in range(4):
-            self._face([last[k], last[(k + 1) % 4], tip], [(k / 4, 0.1), ((k + 1) / 4, 0.1), ((k + 0.5) / 4, 0.0)])
+        for k in range(n):
+            self._face([last[k], last[(k + 1) % n], tip], [(k / n, 0.1), ((k + 1) / n, 0.1), ((k + 0.5) / n, 0.0)])
+        self._face(list(reversed(rings[0])), [((k + 0.5) / n, 1.0) for k in range(n)])  # close the root
 
     def finish(self):
         bmesh.ops.recalc_face_normals(self.bm, faces=self.bm.faces)
@@ -225,4 +233,38 @@ def king_mane(seed=5):
     return h.finish()
 
 
-STYLES = {"king_mane": king_mane, "messy_short": messy_short, "wild_mane": wild_mane, "top_knot": top_knot, "beard": beard}
+def king_crown(seed=8):
+    """Original hair for the King, inspired by a big spiky catalog mane: a dense crown of
+    thick spikes swept up and back, layered locks falling to the shoulders, and loose,
+    uneven bangs above the eye."""
+    h = HairBuilder(seed)
+    h.chunky = True
+    h.cap(front_cut=0.38, back_low=-0.5)
+    rnd = h.rnd
+    # Crown: dense spikes swept up and strongly back.
+    for d in around(rnd, 30, (40, 88), (0, 360)):
+        h.clump(d + Vector((0, 0.85, 0.55)), rnd.uniform(0.85, 1.6), rnd.uniform(0.26, 0.34), gravity=-0.1,
+                lift=0.35, curl=rnd.uniform(-0.45, 0.45), twist=rnd.uniform(-0.7, 0.7), thickness=0.55, segments=7)
+    # Mid layer: spikes pointing out and back all round, slightly drooping.
+    for d in around(rnd, 28, (8, 40), (20, 340)):
+        h.clump(Vector((d.x * 1.15, d.y + 0.55, d.z + 0.15)), rnd.uniform(0.75, 1.25), rnd.uniform(0.24, 0.31),
+                gravity=0.3, lift=0.1, curl=rnd.uniform(-0.5, 0.5), twist=rnd.uniform(-0.7, 0.7), thickness=0.5)
+    # Back: heavy locks falling to the shoulders.
+    for d in around(rnd, 24, (-20, 18), (90, 270)):
+        h.clump(d + Vector((0, 0.35, 0)), rnd.uniform(1.1, 1.75), rnd.uniform(0.25, 0.32), gravity=0.95, lift=-0.1,
+                curl=rnd.uniform(-0.3, 0.3), twist=rnd.uniform(-0.6, 0.6), thickness=0.5, segments=8)
+    # Bangs: uneven clumps from the hairline, hanging over the forehead, clear of the eye.
+    for k in range(7):
+        x = -0.45 + 0.15 * k + rnd.uniform(-0.04, 0.04)
+        root = Vector((x, -0.75, 0.8))
+        h.clump(root, rnd.uniform(0.6, 0.85), rnd.uniform(0.2, 0.26), gravity=1.3, lift=0.2,
+                curl=(1 if x > 0 else -1) * rnd.uniform(0.2, 0.6), twist=rnd.uniform(-0.4, 0.4), thickness=0.5)
+    # Side locks framing the face down to the jaw.
+    for s in (1, -1):
+        for k in range(3):
+            h.clump(Vector((s * 0.95, -0.4 + 0.18 * k, 0.3)), 0.9 - 0.12 * k, 0.19, gravity=1.0,
+                    curl=s * 0.25, twist=rnd.uniform(-0.4, 0.4), thickness=0.5, segments=7)
+    return h.finish()
+
+
+STYLES = {"king_crown": king_crown, "king_mane": king_mane, "messy_short": messy_short, "wild_mane": wild_mane, "top_knot": top_knot, "beard": beard}

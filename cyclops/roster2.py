@@ -482,7 +482,7 @@ def cyclops_king(sculpted=False):
                 p.line(side + "LowerArm", f, [(0, v), (1, v + 0.03)], (30, 24, 34), width=4)
     p.shade()
     ch.painter = p
-    ch.hairs.append(("Head", "Hair", hair.king_mane(5), ((246, 240, 250), (150, 120, 190), (255, 255, 255))))
+    ch.hairs.append(("Head", "Hair", hair.king_crown(8), ((246, 240, 250), (150, 120, 190), (255, 255, 255))))
     o = ch.outfit
     h = o("Head")
     band(h, 0.32, 0.44, 0.66, 0.66, 0.24, "gold")
@@ -883,6 +883,33 @@ def sculpt_part(obj, bumps, cuts=4):
         poly.use_smooth = True
 
 
+def replace_head(head, template_path, name):
+    """Swap the Studio head for a clean rounded 1.2-stud block of the same size. The stock
+    head has a mouth slit, an inner mouth and face-feature meshes that show through as a
+    smile; cyclopes have no mouth. The new head is UV'd straight onto the painted template."""
+    xs, ys, zs = ([getattr(v.co, a) for v in head.data.vertices] for a in "xyz")
+    size = (max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs))
+    bm = style2.rounded_box(size, 0.27)
+    style2.project(bm, "Head")
+    me = bpy.data.meshes.new("Head_Body")
+    bm.to_mesh(me)
+    bm.free()
+    me.uv_layers[0].name = "UVMap"
+    for poly in me.polygons:
+        poly.use_smooth = True
+    mat = bpy.data.materials.new(name + "Head")
+    mat.use_nodes = True
+    t = mat.node_tree.nodes.new("ShaderNodeTexImage")
+    t.image = bpy.data.images.load(template_path)
+    bsdf = mat.node_tree.nodes["Principled BSDF"]
+    mat.node_tree.links.new(t.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.8
+    me.materials.append(mat)
+    old = head.data
+    head.data = me
+    bpy.data.meshes.remove(old)
+
+
 def king_bumps():
     """Pecs, a six-pack, obliques, back, delts and biceps for the 3D King."""
     t = []
@@ -923,6 +950,7 @@ def build_character(ch, atlas_mats):
         o.data.uv_layers.remove(o.data.uv_layers["Paint"])
         o.name = o.data.name = f"{part}_Body"
         objs.append(o)
+    replace_head(parts["Head"], template, ch.name)
     if ch.sculpt:
         for part, bumps in ch.sculpt.items():
             sculpt_part(parts[part], bumps)
@@ -994,6 +1022,7 @@ def main():
     render_lineups(built, weapon_objs, mats)
 
 
+SHOW_USER_HAIR = False  # the King now wears his own original hair (hair.king_crown)
 USER_HAIR = "/tmp/claude-0/-home-user-EEE/501a4460-fa65-53b8-babc-75b878986ea1/scratchpad/hair_only.obj"
 # Where the hair sits relative to the head centre, measured on the buyer's own avatar
 # export (their rig faces +Y; this is already turned to face -Y).
@@ -1048,7 +1077,7 @@ def render_lineups(built, weapon_objs, mats):
             # One close-up per King; the buyer's own hair is shown here as a preview only.
             for ch, objs in members:
                 head = next(o for o in objs if o.name.endswith("Head_Body"))
-                user_hair = preview_user_hair(head)
+                user_hair = preview_user_hair(head) if SHOW_USER_HAIR else None
                 own = [o for o in objs if "Head_Hair" in o.name]
                 visible = [o for o in objs if o not in own] + ([user_hair] if user_hair else own)
                 build_all.set_visible(bpy.data.objects, visible)
