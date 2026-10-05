@@ -884,12 +884,41 @@ def sculpt_part(obj, bumps, cuts=4):
 
 
 def replace_head(head, template_path, name):
-    """Swap the Studio head for a clean rounded 1.2-stud block of the same size. The stock
-    head has a mouth slit, an inner mouth and face-feature meshes that show through as a
-    smile; cyclopes have no mouth. The new head is UV'd straight onto the painted template."""
-    xs, ys, zs = ([getattr(v.co, a) for v in head.data.vertices] for a in "xyz")
+    """Swap the Studio head for a clean one with exactly the default Roblox head's shape.
+    The stock head has a mouth slit, an inner mouth and face-feature meshes that show
+    through as a smile; cyclopes have no mouth. A finely subdivided rounded block is
+    shrink-wrapped onto the stock head's outer surface (rays cast inward from outside),
+    dents where a ray fell into the mouth slit are smoothed out, and the result is UV'd
+    straight onto the painted template."""
+    from mathutils.bvhtree import BVHTree
+    src = bmesh.new()
+    src.from_mesh(head.data)
+    tree = BVHTree.FromBMesh(src)
+    xs, ys, zs = ([v.co[k] for v in src.verts] for k in range(3))
     size = (max(xs) - min(xs), max(ys) - min(ys), max(zs) - min(zs))
-    bm = style2.rounded_box(size, 0.27)
+    centre = Vector(((max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2, (max(zs) + min(zs)) / 2))
+    src.free()
+
+    bm = style2.rounded_box(size, 0.27, centre)
+    bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=3, use_grid_fill=True)
+    radius = {}
+    for v in bm.verts:
+        d = (v.co - centre).normalized()
+        hit, *_ = tree.ray_cast(centre + d * 3.0, -d, 3.0)
+        radius[v] = (hit - centre).length if hit else (v.co - centre).length
+    # Median-smooth the radii twice so the mouth slit and face-feature bumps vanish.
+    for _ in range(2):
+        new = {}
+        for v in bm.verts:
+            ring = sorted([radius[v]] + [radius[e.other_vert(v)] for e in v.link_edges])
+            new[v] = ring[len(ring) // 2]
+        radius = new
+    for _ in range(2):  # then a light relax so the surface is perfectly smooth
+        radius = {v: 0.5 * radius[v] + 0.5 * sum(radius[e.other_vert(v)] for e in v.link_edges) / len(v.link_edges)
+                  for v in bm.verts}
+    for v in bm.verts:
+        v.co = centre + (v.co - centre).normalized() * radius[v]
+    bm.normal_update()
     style2.project(bm, "Head")
     me = bpy.data.meshes.new("Head_Body")
     bm.to_mesh(me)
