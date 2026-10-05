@@ -444,12 +444,13 @@ def king_face(p, skin):
     a heavy V brow and frown lines."""
     P = "Head"
     dark = (40, 14, 34)
-    p.ellipse(P, "front", 0.5, 0.55, 0.36, 0.17, (90, 50, 80))
-    p.ellipse(P, "front", 0.5, 0.55, 0.3, 0.11, dark)
-    p.poly(P, "front", [(0.1, 0.33), (0.5, 0.5), (0.9, 0.33), (0.9, 0.42), (0.5, 0.57), (0.1, 0.42)],
+    # Socket centred on the glowing eye geometry (z = +0.04 on the head -> v ~ 0.47).
+    p.ellipse(P, "front", 0.5, 0.47, 0.34, 0.1, (90, 50, 80))
+    p.ellipse(P, "front", 0.5, 0.47, 0.29, 0.065, dark)
+    p.poly(P, "front", [(0.1, 0.26), (0.5, 0.41), (0.9, 0.26), (0.9, 0.34), (0.5, 0.47), (0.1, 0.34)],
            mul(skin, 0.5))
-    p.line(P, "front", [(0.46, 0.5), (0.43, 0.38)], mul(skin, 0.45), width=5)
-    p.line(P, "front", [(0.54, 0.5), (0.57, 0.38)], mul(skin, 0.45), width=5)
+    p.line(P, "front", [(0.46, 0.41), (0.43, 0.3)], mul(skin, 0.45), width=5)
+    p.line(P, "front", [(0.54, 0.41), (0.57, 0.3)], mul(skin, 0.45), width=5)
 
 
 def cyclops_king(sculpted=False):
@@ -1028,10 +1029,18 @@ def main():
     img = bpy.data.images.load(kit.build_atlas(os.path.join(HERE, "export", "cyclops_texture.png")))
     mats = build_all.make_materials(img)
 
+    # --only Name1,Name2 rebuilds just those characters and keeps everyone else's
+    # entries from the existing CyclopsData.lua.
+    only = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--only=")), None)
+    previous = existing_outfit_entries() if only else {}
     outfit_lua, weapon_lua, built = [], [], {}
     for group, makers in ROSTER.items():
         for make in makers:
             ch = make()
+            if only and ch.name not in only:
+                if ch.name in previous:
+                    outfit_lua.append(previous[ch.name])
+                continue
             objs = build_character(ch, mats)
             build_all.export_fbx(os.path.join(OUT, ch.name + ".fbx"), objs)
             outfit_lua.append(build_all.lua_outfit(ch.outfit, objs))
@@ -1049,6 +1058,25 @@ def main():
     if no_render:
         return
     render_lineups(built, weapon_objs, mats)
+
+
+def existing_outfit_entries():
+    """Outfit entries (name -> Lua text) from the current generated CyclopsData.lua."""
+    path = os.path.join(HERE, "roblox", "CyclopsData.lua")
+    if not os.path.exists(path):
+        return {}
+    text = open(path).read()
+    body = text[text.index("\toutfits = {") + len("\toutfits = {"):text.index("\n\t},\n\tweapons")]
+    entries, name, buf = {}, None, []
+    for line in body.split("\n"):
+        if line.startswith("\t\t") and not line.startswith("\t\t\t") and line.rstrip().endswith("= {"):
+            name, buf = line.strip().split(" ")[0], [line]
+        elif name:
+            buf.append(line)
+            if line == "\t\t},":
+                entries[name] = "\n".join(buf)
+                name = None
+    return entries
 
 
 SHOW_USER_HAIR = False  # the King now wears his own original hair (hair.king_crown)
