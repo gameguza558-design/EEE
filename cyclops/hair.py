@@ -52,6 +52,7 @@ class HairBuilder:
         self.bm = bmesh.new()
         self.uv = self.bm.loops.layers.uv.new("UVMap")
         self.rnd = random.Random(seed)
+        self.pad = 0.02  # how far above the head surface clumps start (bigger over helmets)
 
     def _face(self, verts, uvs):
         f = self.bm.faces.new(verts)
@@ -86,7 +87,7 @@ class HairBuilder:
               twist=0.0):
         """One tapered, flattened clump of hair growing from the scalp along root_dir."""
         n = Vector(root_dir).normalized()
-        p = scalp(n, 0.02)
+        p = scalp(n, self.pad)
         direction = (n + Vector((0, 0, lift))).normalized()
         side = n.cross(Vector((0, 0, 1)))
         if side.length < 1e-3:

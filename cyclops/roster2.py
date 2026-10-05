@@ -235,6 +235,7 @@ class Character:
         self.painter = None
         self.outfit = Outfit(name, glow=glow)
         self.hairs = []  # (part, kind, bmesh, (base, tip, highlight))
+        self.sculpt = None  # {part: [(face, cu, cv, ru, rv, height)]} real 3D muscle bulges
 
 
 def villager():
@@ -356,10 +357,13 @@ def wolf_rider():
     return ch
 
 
-def pelt():
-    """Wolf-pelt hood: shaggy fur over the head and shoulders, with the wolf's ears."""
+def pelt(over_helmet=False):
+    """Wolf-pelt hood: shaggy fur over the head and shoulders, with the wolf's ears.
+    over_helmet: bigger, to sit on top of a knight's helmet."""
     h = hair.HairBuilder(9)
-    h.cap(radius=hair.HEAD_HALF + 0.08, front_cut=0.25, back_low=-0.7)
+    extra = 0.26 if over_helmet else 0.0
+    h.pad = 0.02 + extra
+    h.cap(radius=hair.HEAD_HALF + 0.08 + extra, front_cut=0.25 + (0.15 if over_helmet else 0), back_low=-0.7)
     rnd = h.rnd
     for d in hair.around(rnd, 30, (-25, 40), (55, 305)):
         h.clump(d, rnd.uniform(0.5, 0.9), rnd.uniform(0.18, 0.25), gravity=1.0, lift=-0.2, twist=rnd.uniform(-0.5, 0.5))
@@ -448,8 +452,10 @@ def king_face(p, skin):
     p.line(P, "front", [(0.54, 0.5), (0.57, 0.38)], mul(skin, 0.45), width=5)
 
 
-def cyclops_king():
-    ch = Character("CyclopsKing", glow=PINK)
+def cyclops_king(sculpted=False):
+    ch = Character("CyclopsKing3D" if sculpted else "CyclopsKing", glow=PINK)
+    if sculpted:
+        ch.sculpt = king_bumps()
     skin = (214, 192, 204)
     p = Painter(seed=41)
     skin_all(p, skin)
@@ -501,13 +507,279 @@ def cyclops_king():
     return ch
 
 
+# ---------------------------------------------------------------------------
+# Nobles, soldiers and the wolf corps.
+def embroidery(p, part, face, color, seed=0):
+    """Gold scrollwork: mirrored swirls down a panel."""
+    rnd = random.Random(seed)
+    for k in range(4):
+        v = 0.12 + 0.22 * k
+        for sgn in (1, -1):
+            pts = [(0.5 + sgn * (0.06 + 0.12 * math.cos(a / 3)), v + 0.07 * math.sin(a / 3)) for a in range(0, 19, 3)]
+            p.line(part, face, pts, color, width=4)
+        p.ellipse(part, face, 0.5, v, 0.025, 0.025, color)
+
+
+def ruff(o, color="linen", n=18):
+    t = o("UpperTorso")
+    for k in range(n):
+        a = 2 * math.pi * k / n
+        d = (math.cos(a), math.sin(a) * 0.7, 0.15)
+        t.spike((0.3 * math.cos(a), 0.22 * math.sin(a), 0.82), d, 0.42, 0.13, color, sides=4)
+
+
+def fur_mantle(o, color="fur", n=16):
+    t = o("UpperTorso")
+    for k in range(n):
+        a = math.pi * (-0.1 + 1.2 * k / (n - 1))
+        x = math.cos(a) * 1.0
+        y = 0.55 - math.sin(a) * 0.05
+        t.spike((x, y * (1 if k % 2 else -1) * 0.9, 0.78), (x * 0.6, (1 if k % 2 else -1) * 0.4, -0.6), 0.45, 0.16,
+                color, sides=4)
+
+
+def kettle_helmet(o, color="plate_mid"):
+    h = o("Head")
+    h.shell([(0.2, 0.72, 0.72, 0.22), (0.5, 0.66, 0.66, 0.22), (0.72, 0.38, 0.38, 0.16)], color, tip=(0, 0, 0.8))
+    band(h, 0.18, 0.28, 0.98, 0.98, 0.32, color)
+    band(h, 0.27, 0.33, 0.73, 0.73, 0.22, "leather_strap")
+
+
+def tower_shield(o):
+    s = o("LeftLowerArm", "Shield")
+    outline = [(-0.7, 1.3), (0.7, 1.3), (0.75, -1.2), (0.0, -1.45), (-0.75, -1.2)]
+    prof = [(-up, across) for across, up in outline]
+    s.loft([(0.62, prof), (0.74, prof)], "shield", rot=(0, 90, 0))
+    big = [(x * 1.06, y * 1.04) for x, y in prof]
+    s.loft([(0.6, big), (0.66, big)], "plate_mid", rot=(0, 90, 0))
+    blob(s, (0.8, 0, 0.05), (0.1, 0.22, 0.22), "plate_trim")
+
+
+def noble():
+    ch = Character("Noble", weapon="Rapier")
+    skin, coat, gold = (138, 146, 140), (110, 26, 40), (220, 180, 80)
+    p = Painter(seed=51)
+    skin_all(p, skin)
+    cyclops_face(p, skin, iris=(200, 150, 60))
+    shirt(p, coat, sleeves="long")
+    for f in ("front", "back"):
+        embroidery(p, "UpperTorso", f, gold, seed=1)
+    for v in (0.2, 0.4, 0.6, 0.8):
+        p.ellipse("UpperTorso", "front", 0.5, v, 0.03, 0.03, gold)
+    for side in ("Left", "Right"):
+        for f in SIDES4:
+            for u in (0.25, 0.5, 0.75):  # slashed sleeves
+                p.box(side + "UpperArm", f, u - 0.04, 0.2, u + 0.04, 0.8, (230, 220, 200))
+            p.box(side + "LowerArm", f, 0, 0.8, 1, 1, (240, 235, 225))  # lace cuffs
+    strap(p, gold)
+    pants(p, (30, 26, 34), belt=(40, 30, 26), buckle=gold)
+    for side in ("Left", "Right"):
+        for f in SIDES4:
+            p.box(side + "LowerLeg", f, 0, 0.0, 1, 0.55, (235, 230, 220))  # stockings
+    boots(p, (25, 22, 26), height=0.45)
+    p.shade()
+    ch.painter = p
+    ch.hairs.append(("Head", "Hair", hair.messy_short(21), ((150, 110, 60), (90, 62, 34), (220, 180, 120))))
+    o = ch.outfit
+    ruff(o)
+    common.back_cloth(o, "cloth", top=0.8, length=1.5, width=0.9, y=0.62)
+    h = o("Head")
+    tube(h, 0.55, 0.68, 0.72, 0.66, "cloth", sides=12, pos=(0.05, 0.0, 0))  # beret
+    tube(h, 0.68, 0.8, 0.66, 0.4, "cloth", sides=12, pos=(0.1, 0.05, 0))
+    h.spike((-0.45, 0.1, 0.75), (-0.6, 0.6, 0.6), 1.0, 0.1, "linen", sides=4)  # feather
+    return ch
+
+
+def aristocrat():
+    ch = Character("Aristocrat", weapon="CaneSword")
+    skin, coat, vest, gold = (146, 152, 148), (232, 228, 222), (76, 40, 96), (215, 175, 80)
+    p = Painter(seed=52)
+    skin_all(p, skin)
+    cyclops_face(p, skin, iris=(170, 120, 230))
+    shirt(p, coat, sleeves="long")
+    p.box("UpperTorso", "front", 0.32, 0.0, 0.68, 1.0, vest)
+    for v in (0.3, 0.5, 0.7, 0.9):
+        p.ellipse("UpperTorso", "front", 0.5, v, 0.025, 0.025, gold)
+    p.poly("UpperTorso", "front", [(0.38, 0), (0.62, 0), (0.55, 0.22), (0.45, 0.22)], (245, 245, 245))  # cravat
+    for f in ("front", "back", "left", "right"):
+        p.line("UpperTorso", f, [(0.3, 0), (0.3, 1)] if f == "front" else [(0, 0.02), (1, 0.02)], gold, width=6)
+    p.line("UpperTorso", "front", [(0.7, 0), (0.7, 1)], gold, width=6)
+    for side in ("Left", "Right"):
+        for f in SIDES4:
+            p.box(side + "LowerArm", f, 0, 0.72, 1, 0.8, gold)
+    pants(p, (90, 88, 96), belt=None)
+    p.fill("LowerTorso", SIDES4, coat)
+    boots(p, (22, 20, 24), height=0.6)
+    gloves(p, (240, 240, 240))
+    p.shade()
+    ch.painter = p
+    ch.hairs.append(("Head", "Hair", hair.messy_short(22), ((240, 238, 245), (190, 185, 200), (255, 255, 255))))
+    o = ch.outfit
+    h = o("Head")
+    tube(h, 0.62, 0.7, 0.92, 0.92, "black", sides=16)  # top hat brim
+    tube(h, 0.7, 1.55, 0.58, 0.6, "black", sides=16)
+    tube(h, 0.74, 0.86, 0.62, 0.62, "cloth_dark", sides=16)
+    g = o("Head", "Glow")
+    for k in range(14):  # monocle ring around the single eye
+        a = 2 * math.pi * k / 14
+        h.box((0.05, 0.04, 0.1), "gold", pos=(0.25 * math.cos(a), -0.66, -0.06 + 0.25 * math.sin(a)),
+              rot=(0, -math.degrees(a), 0))
+    h.box((0.03, 0.03, 0.7), "gold", pos=(0.28, -0.66, -0.5), rot=(0, -20, 0))  # chain
+    o("LowerTorso").cloth([-0.8, -0.4, 0.0, 0.4, 0.8], -0.1, [-1.9, -2.1, -2.2, -2.1, -1.9], 0.66, "linen", sag=0.06)
+    return ch
+
+
+def priest():
+    ch = Character("Priest", weapon="EyeStaff")
+    skin, robe, stole, gold = (126, 132, 130), (34, 26, 44), (98, 40, 140), (210, 170, 80)
+    p = Painter(seed=53)
+    skin_all(p, skin)
+    cyclops_face(p, skin, iris=(210, 90, 255), corruption=True)
+    shirt(p, robe, sleeves="long")
+    pants(p, robe, belt=None)
+    for part in ("UpperTorso", "LowerTorso", "LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg"):
+        for u in (0.3, 0.7):
+            p.box(part, "front", u - 0.07, 0, u + 0.07, 1, stole)
+            p.line(part, "front", [(u - 0.07, 0), (u - 0.07, 1)], gold, width=4)
+            p.line(part, "front", [(u + 0.07, 0), (u + 0.07, 1)], gold, width=4)
+    # The corrupted eye sigil on the chest.
+    p.ellipse("UpperTorso", "front", 0.5, 0.42, 0.2, 0.12, (200, 120, 255), outline=gold, width=6)
+    p.ellipse("UpperTorso", "front", 0.5, 0.42, 0.06, 0.08, (40, 10, 50))
+    for f in SIDES4:
+        p.box("LowerTorso", f, 0, 0.3, 1, 0.55, (150, 120, 80))  # rope belt
+    corruption(p, ["LeftHand", "RightHand", "LeftLowerArm"], 0.6, seed=4)
+    boots(p, (30, 24, 30), height=0.2)
+    p.shade()
+    ch.painter = p
+    ch.hairs.append(("Head", "Hood", hood(), ((58, 44, 74), (32, 24, 42), (96, 76, 120))))
+    o = ch.outfit
+    lt = o("LowerTorso")
+    xs = [-1.0, -0.6, -0.2, 0.2, 0.6, 1.0]
+    lt.cloth(xs, -0.1, [-3.0, -3.15, -3.05, -3.15, -3.0, -3.1], -0.68, "cloth_dark", sag=-0.08)
+    lt.cloth(xs, -0.1, [-3.05, -3.2, -3.1, -3.2, -3.05, -3.1], 0.68, "cloth_dark", sag=0.08)
+    o("UpperTorso", "Glow").box((0.12, 0.05, 0.16), "glow", pos=(0, -0.66, 0.15), rot=(0, 45, 0))
+    o.crystals("LeftHand", 3, (0.5, 0.0, 0.0), (0.05, 0.3, 0.1), (1, 0, 0.5), length=(0.15, 0.3),
+               radius=(0.03, 0.06))
+    return ch
+
+
+def spearman(with_shield=False):
+    ch = Character("SpearmanShield" if with_shield else "Spearman", weapon="Spear", shield=with_shield)
+    skin, gamb, brig = (132, 140, 134), (122, 100, 74), (120, 34, 40)
+    p = Painter(seed=54 + with_shield)
+    skin_all(p, skin)
+    cyclops_face(p, skin, iris=(230, 160, 70))
+    shirt(p, gamb, sleeves="long")
+    for part in ("LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm"):
+        for f in SIDES4:
+            quilt(p, part, f, gamb)
+    for f in SIDES4:  # brigandine: cloth over riveted plates
+        p.box("UpperTorso", f, 0.05, 0.1, 0.95, 1.0, brig, outline=mul(brig, 0.5), width=4)
+        for v in (0.25, 0.45, 0.65, 0.85):
+            for u in (0.15, 0.32, 0.5, 0.68, 0.85):
+                p.ellipse("UpperTorso", f, u, v, 0.018, 0.018, (200, 190, 160))
+    pants(p, (82, 66, 50), belt=(60, 40, 26))
+    gloves(p, (70, 50, 34))
+    boots(p, (62, 44, 30), height=0.7)
+    p.shade()
+    ch.painter = p
+    o = ch.outfit
+    kettle_helmet(o)
+    for side, sx in (("Left", 1), ("Right", -1)):
+        o(side + "UpperArm").box((0.5, 1.15, 0.3), "plate_mid", pos=(sx * 0.5, 0, 0.5), rot=(0, sx * 25, 0))
+    common.pouch(o, -0.78)
+    if with_shield:
+        tower_shield(o)
+    return ch
+
+
+def wolf_handler():
+    ch = Character("WolfHandler", weapon="SerratedCleaver")
+    skin, fur, leather = (134, 142, 136), (98, 92, 88), (92, 60, 38)
+    p = Painter(seed=56)
+    skin_all(p, skin)
+    cyclops_face(p, skin, iris=(240, 190, 60))
+    shirt(p, (70, 58, 52), sleeves="short")
+    for f in SIDES4:
+        p.box("UpperTorso", f, 0.0, 0.05, 1.0, 0.9, fur)  # fur vest
+        for k in range(14):
+            u = (k * 0.137) % 1
+            p.line("UpperTorso", f, [(u, 0.1), (u + 0.03, 0.85)], mul(fur, 0.75), width=3)
+    p.box("UpperTorso", "front", 0.42, 0.05, 0.58, 0.9, (70, 58, 52))
+    p.box("LowerTorso", "front", 0.15, 0.0, 0.85, 1.0, leather)
+    pants(p, (60, 48, 40), belt=(55, 36, 24))
+    for side in ("Left", "Right"):
+        wraps(p, side + "LowerArm", (210, 200, 180), count=4)  # bandages
+    boots(p, (60, 42, 28), height=0.6, cuff=fur)
+    corruption(p, ["RightLowerArm"], 0.35, seed=6)
+    p.shade()
+    ch.painter = p
+    ch.hairs.append(("Head", "Hair", hair.messy_short(23), ((50, 40, 36), (30, 24, 22), (100, 85, 75))))
+    o = ch.outfit
+    fur_mantle(o)
+    lt = o("LowerTorso")
+    for k in range(7):  # coiled leash chain at the hip
+        lt.box((0.1, 0.05, 0.16), "iron", pos=(0.85, -0.3 + 0.08 * k, -0.15 - 0.09 * k), rot=(0, 0, 90 * (k % 2)))
+    lt.box((0.06, 0.06, 0.2), "bone", pos=(-0.7, -0.62, -0.1))  # whistle
+    return ch
+
+
+def wolf_knight():
+    ch = Character("WolfKnight", weapon="SerratedSword", shield=False)
+    skin = (128, 136, 130)
+    p = Painter(seed=57)
+    skin_all(p, skin)
+    cyclops_face(p, skin, iris=(210, 90, 255), corruption=True)
+    shirt(p, (44, 40, 48), sleeves="long")
+    for part in style2.PARTS:
+        if part != "Head":
+            for f in SIDES4:
+                quilt(p, part, f, (44, 40, 48))
+    p.shade()
+    ch.painter = p
+    o = elite.elite_onehorn("WolfKnight", 0.6, horn=False, head_crystals=False, chest_v=True, crystals=0.6)
+    remap_tiles(o, {"plate_mid": "plate_dark", "plate_trim": "iron"})
+    common.back_cloth(o, "fur_dark", top=0.85, length=1.9, width=1.0, y=0.8)
+    fur_mantle(o, "fur_dark", n=18)
+    ch.outfit = o
+    ch.hairs.append(("Head", "Pelt", pelt(over_helmet=True), ((70, 66, 70), (36, 34, 38), (130, 126, 132))))
+    return ch
+
+
+def general():
+    ch = Character("General", weapon="DragonSlayer")
+    skin = (124, 130, 128)
+    p = Painter(seed=58)
+    skin_all(p, skin)
+    cyclops_face(p, skin, iris=(210, 90, 255), corruption=True)
+    shirt(p, (30, 26, 32), sleeves="long")
+    p.shade()
+    ch.painter = p
+    o = elite.elite_onehorn("General", 0.8, horn=False, twin_horns=1.4, head_crystals=True, chest_v=True,
+                            crystals=1.1, right_crystals=True)
+    remap_tiles(o, {"plate_trim": "gold", "plate_mid": "plate_dark"})
+    common.back_cloth(o, "cloth_dark", top=0.88, length=3.8, width=1.15, y=0.82)
+    for side, sx in (("Left", 1), ("Right", -1)):  # even bigger pauldrons
+        o(side + "UpperArm").shell([(0.5, 0.95, 0.85, 0.26, sx * 0.18, 0), (0.95, 0.6, 0.6, 0.2, sx * 0.08, 0)],
+                                   "plate_dark")
+    ch.outfit = o
+    plume = hair.HairBuilder(31)
+    plume.pad = 0.3
+    for k in range(9):  # crimson plume on the helmet
+        plume.clump(Vector((0, 0.2 + 0.1 * k, 1)), 1.0 + 0.1 * k, 0.15, gravity=0.7, lift=0.6, segments=7)
+    ch.hairs.append(("Head", "Plume", plume.finish(), ((170, 30, 40), (90, 12, 20), (230, 90, 90))))
+    return ch
+
+
 ROSTER = {
     "stage1": [villager, hunter, woodcutter, wolf_rider,
                lambda: knight("apprentice", 0.3, "KnightApprentice", "ApprenticeSword", 21), elite_onehorn],
     "stage2": [lambda: knight("apprentice_infected", 0.55, "KnightApprenticeInfected", "ApprenticeAxe", 24),
                lambda: knight("mid", 0.65, "KnightMid", "MidSword", 22),
                lambda: knight("high", 0.9, "KnightHigh", "HighAxe", 23)],
-    "boss": [cyclops_king],
+    "court": [noble, aristocrat, priest, general],
+    "army": [spearman, lambda: spearman(True), wolf_handler, wolf_knight],
+    "boss": [cyclops_king, lambda: cyclops_king(sculpted=True)],
 }
 
 
@@ -573,6 +845,67 @@ def make_outline(obj, thickness):
     return o
 
 
+SIDE_AXIS = {  # face -> (outward normal, how (u, v) map onto the part's bbox)
+    "front": (Vector((0, -1, 0)), lambda n: (n.x, 1 - n.z)),
+    "back": (Vector((0, 1, 0)), lambda n: (1 - n.x, 1 - n.z)),
+    "left": (Vector((1, 0, 0)), lambda n: (n.y, 1 - n.z)),
+    "right": (Vector((-1, 0, 0)), lambda n: (1 - n.y, 1 - n.z)),
+}
+
+
+def sculpt_part(obj, bumps, cuts=4):
+    """Subdivide a body part and push real muscle bulges out of it. Bumps use the same
+    (face, u, v) coordinates as the painter, so the painted shading lines up with them."""
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=cuts, use_grid_fill=True)
+    bm.normal_update()
+    xs, ys, zs = ([getattr(v.co, a) for v in bm.verts] for a in "xyz")
+    lo = Vector((min(xs), min(ys), min(zs)))
+    span = Vector((max(xs), max(ys), max(zs))) - lo
+    for v in bm.verts:
+        n = Vector(((v.co.x - lo.x) / span.x, (v.co.y - lo.y) / span.y, (v.co.z - lo.z) / span.z))
+        push = Vector()
+        for face, cu, cv, ru, rv, height in bumps:
+            axis, to_uv = SIDE_AXIS[face]
+            if v.normal.dot(axis) < 0.35:
+                continue
+            u, w = to_uv(n)
+            r2 = ((u - cu) / ru) ** 2 + ((w - cv) / rv) ** 2
+            if r2 < 1:
+                push += axis * height * (1 - r2) ** 2 * min(1.0, v.normal.dot(axis) * 1.6)
+        v.co += push
+    bm.normal_update()
+    bm.to_mesh(obj.data)
+    bm.free()
+    for poly in obj.data.polygons:
+        poly.use_smooth = True
+
+
+def king_bumps():
+    """Pecs, a six-pack, obliques, back, delts and biceps for the 3D King."""
+    t = []
+    for c in (0.28, 0.72):
+        t.append(("front", c, 0.29, 0.22, 0.17, 0.16))  # pecs
+        t.append(("back", c, 0.3, 0.2, 0.24, 0.08))  # back / shoulder blades
+    for c in (0.41, 0.59):
+        for v in (0.6, 0.73, 0.86):
+            t.append(("front", c, v, 0.075, 0.055, 0.07))  # six-pack
+    for c in (0.14, 0.86):
+        t.append(("front", c, 0.75, 0.08, 0.22, 0.04))  # obliques
+    arm = []
+    for f in ("front", "back", "left", "right"):
+        arm.append((f, 0.5, 0.22, 0.45, 0.2, 0.09))  # deltoid
+    arm.append(("front", 0.5, 0.65, 0.3, 0.22, 0.1))  # biceps
+    arm.append(("back", 0.5, 0.6, 0.3, 0.25, 0.07))  # triceps
+    fore = [("front", 0.45, 0.3, 0.3, 0.25, 0.06), ("back", 0.5, 0.3, 0.3, 0.25, 0.05)]
+    bumps = {"UpperTorso": t}
+    for side in ("Left", "Right"):
+        bumps[side + "UpperArm"] = arm
+        bumps[side + "LowerArm"] = fore
+    return bumps
+
+
 def build_character(ch, atlas_mats):
     """Bake the body, build hair and geometry pieces. Returns all objects (origins at
     the real R15 part centres) for export."""
@@ -589,6 +922,9 @@ def build_character(ch, atlas_mats):
         o.data.uv_layers.remove(o.data.uv_layers["Paint"])
         o.name = o.data.name = f"{part}_Body"
         objs.append(o)
+    if ch.sculpt:
+        for part, bumps in ch.sculpt.items():
+            sculpt_part(parts[part], bumps)
     centres = {part: o.location.copy() for part, o in parts.items()}
     for part, kind, bm, (base, tip, hi) in ch.hairs:
         tex = hair.hair_texture(os.path.join(OUT, f"{ch.name}_{kind}.png"), base, tip, hi)
@@ -657,10 +993,42 @@ def main():
     render_lineups(built, weapon_objs, mats)
 
 
+USER_HAIR = "/tmp/claude-0/-home-user-EEE/501a4460-fa65-53b8-babc-75b878986ea1/scratchpad/hair_only.obj"
+# Where the hair sits relative to the head centre, measured on the buyer's own avatar
+# export (their rig faces +Y; this is already turned to face -Y).
+USER_HAIR_OFFSET = Vector((0.006, 0.531, -0.294))
+
+
+def preview_user_hair(head):
+    """Preview only: the hair the user bought, placed on a King's head. It is never
+    exported - in game it is loaded onto the King by asset ID."""
+    if not os.path.exists(USER_HAIR):
+        return None
+    before = set(bpy.data.objects)
+    bpy.ops.wm.obj_import(filepath=USER_HAIR, use_split_groups=True)
+    new = [o for o in bpy.data.objects if o not in before]
+    hair_obj = new[0]
+    for extra in new[1:]:
+        bpy.data.objects.remove(extra)
+    vs = [hair_obj.matrix_world @ v.co for v in hair_obj.data.vertices]
+    c = Vector([(min(getattr(v, a) for v in vs) + max(getattr(v, a) for v in vs)) / 2 for a in "xyz"])
+    hair_obj.data.transform(Matrix.Translation(USER_HAIR_OFFSET) @ Matrix.Rotation(math.pi, 4, "Z")
+                            @ Matrix.Translation(-c) @ hair_obj.matrix_world)
+    hair_obj.matrix_world = head.matrix_world
+    mat = bpy.data.materials.new("UserHairPreview")
+    mat.use_nodes = True
+    mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.86, 0.8, 0.92, 1)
+    hair_obj.data.materials.clear()
+    hair_obj.data.materials.append(mat)
+    for poly in hair_obj.data.polygons:
+        poly.use_smooth = True
+    return hair_obj
+
+
 def render_lineups(built, weapon_objs, mats):
     scene, cam = build_all.setup_scene()
     scene.view_settings.view_transform = "Standard"
-    scales = {"CyclopsKing": 1.6}
+    scales = {"CyclopsKing": 1.6, "CyclopsKing3D": 1.6}
     for group, members in built.items():
         shown, x = [], 0.0
         for ch, objs in members:
@@ -676,9 +1044,24 @@ def render_lineups(built, weapon_objs, mats):
         top = 6.8 * max(scales.get(c.name, 1.0) for c, _ in members)
         center = (x / 2, 0, top / 2 - 0.2)
         if group == "boss":
-            build_all.render(scene, cam, os.path.join(RENDERS, "r15_boss_hero.png"), (x / 2 - 9, -16, 10),
-                             (x / 2, 0, 6.2), 10.5, (1000, 1000))
-            res, size = (1000, 1200), top + 1.8
+            # One close-up per King; the buyer's own hair is shown here as a preview only.
+            for ch, objs in members:
+                head = next(o for o in objs if o.name.endswith("Head_Body"))
+                user_hair = preview_user_hair(head)
+                own = [o for o in objs if "Head_Hair" in o.name]
+                visible = [o for o in objs if o not in own] + ([user_hair] if user_hair else own)
+                build_all.set_visible(bpy.data.objects, visible)
+                cx = head.matrix_world.translation.x
+                build_all.render(scene, cam, os.path.join(RENDERS, f"r15_{ch.name}_hero.png"),
+                                 (cx - 9, -16, 10), (cx, 0, 6.2), 10.5, (1000, 1000))
+                for tag, y in (("front", -40), ("side", None)):
+                    loc = (cx, -40, 5.4) if y else (cx + 40, 0, 5.4)
+                    build_all.render(scene, cam, os.path.join(RENDERS, f"r15_{ch.name}_{tag}.png"), loc,
+                                     (cx, 0, 5.4), 12.5, (1000, 1100))
+                if user_hair:
+                    user_hair.hide_render = True
+            build_all.set_visible(bpy.data.objects, shown)
+            res, size = (1800, 1100), max(x + 0.6, (top + 1.8) * 1800 / 1100)
         else:
             res, size = (1800, int(1800 * (top + 1.0) / (x + 0.6))), x + 0.6
         for tag, y in (("front", -40), ("back", 40)):

@@ -1,28 +1,49 @@
 # Corrupted Cyclops Roster (Roblox R15)
 
 ตัวละครไซคลอปส์ที่ติด corrupted ทั้งหมด ไล่ระดับตามด่าน สร้างด้วยโค้ด (Blender `bpy`)
-ทุกชุดพอดีกับ **R15 Block rig** และ**ไม่ใช้ armature** แต่ละชิ้นจะถูก weld เข้ากับส่วนร่างกาย R15 ที่ชื่อตรงกัน
+ร่างคือ **mesh R15 จริงจาก Roblox Studio** (`reference/roblox_r15.obj`) ชุด หน้า และกล้ามวาดลง texture
+แล้ว bake ลง UV ของ R15 ส่วนผม เกราะ และคริสตัลเป็นชิ้นแยก ทุกชิ้นมีเส้นขอบอนิเมะ (`_Outline`)
+build ด้วย `python3 cyclops/roster2.py` (ไฟล์อยู่ที่ `export/r15/`)
 
-![stage1](renders/stage1_front.png)
-![stage2](renders/stage2_front.png)
-![boss](renders/boss_hero.png)
-![weapons](renders/weapons.png)
+![stage1](renders/r15_stage1_front.png)
+![stage2](renders/r15_stage2_front.png)
+![court](renders/r15_court_front.png)
+![army](renders/r15_army_front.png)
+![boss](renders/r15_CyclopsKing_hero.png)
+![boss3d](renders/r15_CyclopsKing3D_hero.png)
+![weapons](renders/r15_weapons.png)
 ![wolf](renders/Wolf_hero.png)
 
 ## รายชื่อ
 
-| ด่าน | ชุด (`CyclopsOutfit`) | อาวุธแนะนำ (`CyclopsWeapon`) | Corruption |
-|---|---|---|---|
-| 1 | `Villager` ชาวบ้าน | `Pitchfork` | 15% |
-| 1 | `Hunter` นายพราน | `HunterBow` | 20% |
-| 1 | `Woodcutter` ไซคลอปส์ตัดไม้ | `WoodcutterAxe` | 30% |
-| 1 | `WolfRider` ไซคลอปส์ขี่หมาป่า | `WolfRiderSpear` | 35% |
-| 1 | `KnightApprentice` อัศวินฝึกหัด | `ApprenticeSword` / `ApprenticeAxe` + โล่ | 30% |
-| 1 (Elite) | `EliteOneHorn` One-Horn | `OneHornGreatsword` | 50% |
-| 2 | `KnightApprenticeInfected` อัศวินฝึกหัด (ติดหนักขึ้น) | `ApprenticeSword` / `ApprenticeAxe` + โล่ | 55% |
-| 2 | `KnightMid` อัศวินชั้นกลาง | `MidSword` / `MidAxe` + โล่ | 65% |
-| 2 | `KnightHigh` อัศวินชั้นสูง | `HighSword` / `HighAxe` + โล่ | 90% |
-| บอส | `CyclopsKing` ราชาไซคลอปส์เขาเดียว | ใช้มือเปล่า | 100% (แสงชมพูม่วง) |
+| กลุ่ม | ชุด (`CyclopsOutfit`) | อาวุธแนะนำ (`CyclopsWeapon`) |
+|---|---|---|
+| ด่าน 1 | `Villager` ชาวบ้าน | `Hoe` / `Spade` / `Sickle` / `Scythe` / `Pitchfork` |
+| ด่าน 1 | `Hunter` นายพราน | `HunterBow` |
+| ด่าน 1 | `Woodcutter` ไซคลอปส์ตัดไม้ | `WoodcutterAxe` |
+| ด่าน 1 | `WolfRider` ไซคลอปส์ขี่หมาป่า | `WolfRiderSpear` |
+| ด่าน 1 | `WolfHandler` ชาวบ้านคุมหมาป่า | `SerratedCleaver` (ฟันเลื่อย) |
+| ด่าน 1 | `KnightApprentice` อัศวินฝึกหัด | `ApprenticeSword` / `ApprenticeAxe` + โล่ |
+| ด่าน 1 (Elite) | `EliteOneHorn` One-Horn | `OneHornGreatsword` |
+| ด่าน 2 | `KnightApprenticeInfected` อัศวินฝึกหัด (ติดหนัก) | `ApprenticeSword` / `ApprenticeAxe` + โล่ |
+| ด่าน 2 | `KnightMid` อัศวินชั้นกลาง | `MidSword` / `MidAxe` + โล่ |
+| ด่าน 2 | `KnightHigh` อัศวินชั้นสูง | `HighSword` / `HighAxe` + โล่ |
+| ด่าน 2 | `WolfKnight` อัศวินหมาป่า | `SerratedSword` หรือ `SerratedSpear` (ฟันเลื่อย) |
+| กองทัพ | `Spearman` พลหอก | `Spear` |
+| กองทัพ | `SpearmanShield` พลหอกโล่ | `Spear` + `CyclopsShield = true` (โล่ทาวเวอร์) |
+| ราชสำนัก | `Noble` ขุนนาง | `Rapier` |
+| ราชสำนัก | `Aristocrat` ชนชั้นสูง (หมวกทรงสูง + แว่นตาเดียว) | `CaneSword` |
+| ราชสำนัก | `Priest` บาทหลวง | `EyeStaff` |
+| ราชสำนัก | `General` นายพล | `DragonSlayer` (ดาบมหึมา) |
+| บอส | `CyclopsKing` ราชา (กล้ามวาด) | มือเปล่า |
+| บอส | `CyclopsKing3D` ราชา (ซิกแพ็กและอกนูนเป็น 3D จริง) | มือเปล่า |
+
+**อาวุธฟันเลื่อย** (`Serrated*`) ทำให้ติดสถานะเลือดไหล: เสียเลือด 3 ทุก 0.5 วินาที นาน 4 วินาที
+ระหว่างนั้น Humanoid จะมี attribute `Bleeding = true` (ปรับค่าได้ที่ `Kit.BLEED_*`)
+
+**ผมของราชา:** ใช้ผมที่คุณซื้อใน catalog ด้วย Asset ID ใส่ attribute
+`CyclopsAccessories = "<asset id>"` บน NPC ราชา ระบบจะโหลดผมมาใส่ และซ่อนผมสำรองของชุดให้เอง
+(ไม่ใส่ mesh ผมลงในไฟล์ของเรา เพราะสิทธิ์ที่ได้จากการซื้อคือสิทธิ์สวมใส่ ไม่ใช่สิทธิ์แจกจ่าย mesh)
 
 **อัศวินแต่ละระดับใช้อาวุธได้ 3 แบบ:** ขวาน ดาบ หรือดาบกับโล่
 (ตั้ง `CyclopsShield = true` เพื่อใส่โล่ ฝึกหัดได้โล่กลมไม้ ชั้นกลางได้โล่ทรงหยดน้ำ ชั้นสูงได้โล่ kite ขอบทองที่มีคริสตัล)

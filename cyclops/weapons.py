@@ -16,6 +16,7 @@ class Weapon:
         self.name, self.damage, self.cooldown = name, damage, cooldown
         self.two_handed, self.glow, self.grip = two_handed, glow, grip
         self.pieces = {}
+        self.bleed = False  # saw-toothed weapons apply the Bleeding status in game
 
     def __call__(self, kind):
         return self.pieces.setdefault(kind, Piece())
@@ -264,7 +265,127 @@ def onehorn_greatsword():
     return wp
 
 
+# ---------------------------------------------------------------------------
+# Nobles, soldiers and the wolf corps.
+def serrate(p, z0, z1, x, sign, depth=0.12, step=0.14, thick=0.03, color="blade"):
+    """Saw teeth along a blade edge at x (sign = which side), pointing back toward the grip,
+    so a cut drags and tears (bleeding)."""
+    z = z0
+    while z < z1:
+        p.spike((x, 0, z), (sign, 0, -0.55), depth, 0.045, color, sides=3)
+        z += step
+
+
+def spear():
+    w = Weapon("Spear", damage=17, cooldown=0.8, two_handed=True)
+    haft(w, -1.6, 3.3, 0.07, rings=(3.2,), ring_color="iron")
+    w("Head").loft([(3.3, diamond(0.07, 0.05)), (3.55, diamond(0.19, 0.045)), (3.95, diamond(0.12, 0.035))],
+                   "blade", tip=(0, 0, 4.4))
+    return w
+
+
+def rapier():
+    w = Weapon("Rapier", damage=16, cooldown=0.5)
+    band(w("Handle"), -0.3, 0.3, 0.07, 0.07, 0.02, "leather_strap")
+    w("Blade").loft([(0.35, diamond(0.06, 0.03)), (3.0, diamond(0.035, 0.02))], "blade", tip=(0, 0, 3.4))
+    g = w("Guard")
+    g.box((0.6, 0.06, 0.06), "gold", pos=(0, 0, 0.33))
+    for k in range(7):  # swept hilt: a ring of gold bars around the hand
+        a = math.pi * k / 6
+        g.box((0.04, 0.04, 0.7), "gold", pos=(0.22 * math.cos(a), -0.12 - 0.05 * math.sin(a), 0.0),
+              rot=(0, math.degrees(0.25 * math.cos(a)), 0))
+    blob(w("Pommel"), (0, 0, -0.38), (0.08, 0.08, 0.08), "gold", sides=6, rings=3)
+    return w
+
+
+def cane_sword():
+    w = Weapon("CaneSword", damage=15, cooldown=0.55)
+    tube(w("Handle"), -0.35, 0.35, 0.06, 0.06, "black", sides=8)
+    blob(w("Handle"), (0, 0, -0.45), (0.11, 0.11, 0.11), "gold", sides=8, rings=4)
+    tube(w("Guard"), 0.35, 0.45, 0.075, 0.075, "gold", sides=8)
+    w("Blade").loft([(0.45, diamond(0.05, 0.025)), (2.6, diamond(0.035, 0.02))], "blade", tip=(0, 0, 2.9))
+    return w
+
+
+def eye_staff():
+    """Priest's staff: a ring cradling a glowing eye, with crystal thorns."""
+    w = Weapon("EyeStaff", damage=14, cooldown=1.0, two_handed=True)
+    haft(w, -1.4, 2.9, 0.065, color="black", rings=(2.0, 2.8), ring_color="gold")
+    ring = w("Head")
+    for k in range(12):
+        a = 2 * math.pi * k / 12
+        ring.box((0.07, 0.07, 0.2), "gold", pos=(0.38 * math.cos(a), 0, 3.3 + 0.38 * math.sin(a)),
+                 rot=(0, -math.degrees(a) + 90, 0))
+    blob(w("Glow"), (0, 0, 3.3), (0.22, 0.12, 0.22), "glow", sides=10, rings=5)
+    for k in range(5):
+        a = math.pi * (0.2 + 0.15 * k)
+        w("Glow").spike((0.4 * math.cos(a), 0, 3.3 + 0.4 * math.sin(a)), (math.cos(a), 0, math.sin(a)), 0.3,
+                        0.05, "glow", sides=4)
+    return w
+
+
+def dragon_slayer():
+    """The General's colossal sword: a crude slab of iron, far too big to be called a sword."""
+    w = Weapon("DragonSlayer", damage=55, cooldown=1.9, two_handed=True)
+    band(w("Handle"), -0.75, 0.75, 0.12, 0.12, 0.04, "leather_strap")
+    for z in (-0.5, -0.1, 0.3):
+        band(w("Handle"), z - 0.04, z + 0.04, 0.14, 0.14, 0.04, "leather")
+    w("Guard").box((1.25, 0.34, 0.24), "iron", pos=(0, 0, 0.88))
+    blade = w("Blade")
+    # Thick slab: hexagonal section, barely tapering, with a blunt angled tip.
+    def slab(hw, ht):
+        return [(hw, 0), (hw * 0.82, ht), (-hw * 0.82, ht), (-hw, 0), (-hw * 0.82, -ht), (hw * 0.82, -ht)]
+    blade.loft([(1.0, slab(0.48, 0.13)), (5.6, slab(0.46, 0.12)), (6.6, slab(0.4, 0.1))], "iron",
+               tip=(-0.15, 0, 7.4))
+    for z in (2.0, 3.6, 5.0):  # dents and scars
+        blade.box((0.3, 0.27, 0.06), "plate_dark", pos=(0.1, 0, z), rot=(0, 25, 0))
+    blob(w("Pommel"), (0, 0, -0.9), (0.18, 0.18, 0.16), "iron", sides=6, rings=3)
+    rnd = random.Random(99)
+    for _ in range(6):  # the corruption has started to crack the iron
+        z = rnd.uniform(1.2, 4.5)
+        w("Glow").spike((rnd.uniform(-0.35, 0.35), rnd.choice((-1, 1)) * 0.12, z),
+                        (rnd.uniform(-0.3, 0.3), rnd.choice((-1, 1)), rnd.uniform(0.2, 0.8)), rnd.uniform(0.15, 0.3),
+                        0.05, "glow", sides=5)
+    return w
+
+
+def serrated_spear():
+    w = Weapon("SerratedSpear", damage=15, cooldown=0.8, two_handed=True)
+    w.bleed = True
+    haft(w, -1.6, 3.2, 0.07, color="wood", rings=(3.1,), ring_color="iron")
+    w("Head").loft([(3.2, diamond(0.08, 0.05)), (3.5, diamond(0.22, 0.045)), (4.0, diamond(0.12, 0.035))],
+                   "iron", tip=(0, 0, 4.4))
+    for sgn in (1, -1):
+        serrate(w("Head"), 3.35, 4.1, sgn * 0.19, sgn, depth=0.12, step=0.12, color="iron")
+    return w
+
+
+def serrated_sword():
+    w = Weapon("SerratedSword", damage=17, cooldown=0.7)
+    w.bleed = True
+    band(w("Handle"), -0.32, 0.32, 0.09, 0.09, 0.03, "leather_strap")
+    w("Blade").loft([(0.42, diamond(0.22, 0.05)), (2.6, diamond(0.19, 0.045))], "iron", tip=(0, 0, 3.1))
+    serrate(w("Blade"), 0.6, 2.7, 0.2, 1, depth=0.16, step=0.15, color="iron")  # saw spine on one edge
+    w("Guard").box((0.9, 0.16, 0.12), "plate_dark", pos=(0, 0, 0.38))
+    blob(w("Pommel"), (0, 0, -0.42), (0.11, 0.11, 0.11), "plate_dark", sides=6, rings=3)
+    return w
+
+
+def serrated_cleaver():
+    """The wolf handler's butcher cleaver with a saw back."""
+    w = Weapon("SerratedCleaver", damage=14, cooldown=0.65)
+    w.bleed = True
+    band(w("Handle"), -0.35, 0.3, 0.08, 0.08, 0.025, "wood")
+    w("Blade").box((0.06, 0.62, 1.5), "iron", pos=(0, -0.22, 1.1), top=(1, 1.15))
+    w("Blade").box((0.07, 0.08, 1.5), "blade", pos=(0, -0.55, 1.1))
+    for k in range(10):  # saw back
+        w("Blade").spike((0, 0.1, 0.45 + 0.13 * k), (0, 1, -0.5), 0.13, 0.04, "iron", sides=3)
+    return w
+
+
 def all_weapons():
     return ([pitchfork(), hoe(), spade(), sickle(), scythe(), hunter_bow(), woodcutter_axe(), wolf_rider_spear(), onehorn_greatsword()]
             + [tier_axe(t) for t in ("Apprentice", "Mid", "High")]
-            + [tier_sword(t) for t in ("Apprentice", "Mid", "High")])
+            + [tier_sword(t) for t in ("Apprentice", "Mid", "High")]
+            + [spear(), rapier(), cane_sword(), eye_staff(), dragon_slayer(), serrated_spear(), serrated_sword(),
+               serrated_cleaver()])

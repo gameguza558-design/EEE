@@ -14,7 +14,9 @@
 		   └─ Creatures/<CreatureName>/...    <- MeshParts from export/creatures/<CreatureName>.fbx
 
 	API:
-		Kit.dress(character, outfitName, { shield = true?, stripAvatar = true? })
+		Kit.dress(character, outfitName, { shield = true?, stripAvatar = true?, accessories = { assetId, ... }? })
+		  accessories: catalog accessories (e.g. hair you own) loaded by asset ID; an
+		  accessory that replaces the hair also hides the outfit's own "Head_Hair" piece.
 		Kit.makeWeapon(weaponName) -> Tool
 		Kit.equip(character, weaponName) -> Tool    (NPCs hold it, players get it in the Backpack)
 		Kit.spawnCreature(creatureName, cframe) -> clone of the rigged wolf, standing at cframe
@@ -116,9 +118,13 @@ function Kit.dress(character, outfitName, options)
 	-- The head is scaled with the torso height; other parts stretch per axis to fit.
 	local uniform = torso.Size.Y / Data.blockSize.UpperTorso.Y
 
+	local hasAccessories = options.accessories ~= nil and #options.accessories > 0
 	for _, template in folder:GetChildren() do
 		local piece = info.pieces[template.Name]
 		local partName, kind = string.match(template.Name, "^(%w+)_(%w+)$")
+		if hasAccessories and (kind == "Hair" or kind == "HairOutline") then
+			continue -- replaced by the loaded hair accessory
+		end
 		local bodyPart = partName and character:FindFirstChild(partName)
 		if not (piece and bodyPart and template:IsA("BasePart")) then
 			continue
@@ -148,7 +154,32 @@ function Kit.dress(character, outfitName, options)
 		weld(bodyPart, part)
 		part.Parent = holder
 	end
+	if hasAccessories then
+		Kit.addAccessories(character, options.accessories)
+	end
 	return holder
+end
+
+-- Load catalog accessories (hair, etc.) by asset ID and put them on the character.
+-- InsertService can load assets the game's creator owns or that Roblox allows.
+function Kit.addAccessories(character, assetIds)
+	local InsertService = game:GetService("InsertService")
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+	for _, id in assetIds do
+		local ok, result = pcall(InsertService.LoadAsset, InsertService, tonumber(id))
+		if ok and result then
+			local accessory = result:FindFirstChildWhichIsA("Accessory", true)
+			if accessory then
+				humanoid:AddAccessory(accessory)
+			end
+			result:Destroy()
+		else
+			warn(`CyclopsKit: could not load accessory {id}: {result}`)
+		end
+	end
 end
 
 -------------------------------------------------------------------------------
@@ -156,6 +187,27 @@ end
 
 local function isCyclops(model)
 	return model:FindFirstChild("CyclopsOutfit") ~= nil or model:GetAttribute("CyclopsCreature") ~= nil
+end
+
+-- Bleeding (saw-toothed weapons): damage over time; re-applying refreshes the timer.
+-- While it lasts the humanoid has the attribute Bleeding = true, for status UI/effects.
+Kit.BLEED_DAMAGE = 3 -- per tick
+Kit.BLEED_TICK = 0.5 -- seconds
+Kit.BLEED_DURATION = 4 -- seconds
+
+function Kit.applyBleed(humanoid)
+	humanoid:SetAttribute("BleedUntil", os.clock() + Kit.BLEED_DURATION)
+	if humanoid:GetAttribute("Bleeding") then
+		return -- already ticking; the new end time is picked up below
+	end
+	humanoid:SetAttribute("Bleeding", true)
+	task.spawn(function()
+		while humanoid.Parent and humanoid.Health > 0 and os.clock() < (humanoid:GetAttribute("BleedUntil") or 0) do
+			task.wait(Kit.BLEED_TICK)
+			humanoid:TakeDamage(Kit.BLEED_DAMAGE)
+		end
+		humanoid:SetAttribute("Bleeding", false)
+	end)
 end
 
 local function hookMelee(tool, info)
@@ -192,6 +244,9 @@ local function hookMelee(tool, info)
 		end
 		hit[humanoid] = true
 		humanoid:TakeDamage(info.damage)
+		if info.bleed then
+			Kit.applyBleed(humanoid)
+		end
 	end
 
 	for _, part in tool:GetDescendants() do

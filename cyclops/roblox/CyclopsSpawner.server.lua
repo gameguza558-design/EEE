@@ -7,15 +7,19 @@
 			Attribute CyclopsOutfit  (string)  e.g. "KnightMid"
 			Attribute CyclopsWeapon  (string)  e.g. "MidSword"      (optional)
 			Attribute CyclopsShield  (bool)    true for sword + shield (knights only)
+			Attribute CyclopsAccessories (string) asset IDs, e.g. "1234567,7654321" - hair you own etc.
 
 		Any Part used as a spawn marker
 			Attribute CyclopsCreature (string) "Wolf" or "AlphaWolf"
 			-> replaced by the wolf, standing where the marker is.
 
-	Outfits:  Villager, Hunter, Woodcutter, WolfRider, KnightApprentice, EliteOneHorn,
-	          KnightApprenticeInfected, KnightMid, KnightHigh, CyclopsKing
-	Weapons:  Pitchfork, HunterBow, WoodcutterAxe, WolfRiderSpear, OneHornGreatsword,
-	          ApprenticeAxe, ApprenticeSword, MidAxe, MidSword, HighAxe, HighSword
+	Outfits:  Villager, Hunter, Woodcutter, WolfRider, WolfHandler, KnightApprentice, EliteOneHorn,
+	          KnightApprenticeInfected, KnightMid, KnightHigh, WolfKnight, Spearman, SpearmanShield,
+	          Noble, Aristocrat, Priest, General, CyclopsKing, CyclopsKing3D
+	Weapons:  Pitchfork, Hoe, Spade, Sickle, Scythe, HunterBow, WoodcutterAxe, WolfRiderSpear,
+	          OneHornGreatsword, ApprenticeAxe, ApprenticeSword, MidAxe, MidSword, HighAxe, HighSword,
+	          Spear, Rapier, CaneSword, EyeStaff, DragonSlayer,
+	          SerratedSpear, SerratedSword, SerratedCleaver   (saw-toothed: apply Bleeding)
 ]]
 
 local Players = game:GetService("Players")
@@ -32,7 +36,11 @@ local function setupNpc(model)
 	if not outfit or model:FindFirstChild("CyclopsOutfit") then
 		return
 	end
-	Kit.dress(model, outfit, { shield = model:GetAttribute("CyclopsShield") == true })
+	local accessories = {}
+	for id in string.gmatch(model:GetAttribute("CyclopsAccessories") or "", "%d+") do
+		table.insert(accessories, id)
+	end
+	Kit.dress(model, outfit, { shield = model:GetAttribute("CyclopsShield") == true, accessories = accessories })
 	local weapon = model:GetAttribute("CyclopsWeapon")
 	if weapon then
 		Kit.equip(model, weapon)
