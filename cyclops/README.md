@@ -7,7 +7,7 @@
 ![stage2](renders/stage2_front.png)
 ![boss](renders/boss_hero.png)
 ![weapons](renders/weapons.png)
-![wolves](renders/wolves_side.png)
+![wolf](renders/Wolf_hero.png)
 
 ## รายชื่อ
 
@@ -27,9 +27,14 @@
 **อัศวินแต่ละระดับใช้อาวุธได้ 3 แบบ:** ขวาน ดาบ หรือดาบกับโล่
 (ตั้ง `CyclopsShield = true` เพื่อใส่โล่ ฝึกหัดได้โล่กลมไม้ ชั้นกลางได้โล่ทรงหยดน้ำ ชั้นสูงได้โล่ kite ขอบทองที่มีคริสตัล)
 
-**หมาป่า** (`Wolf` = หมาป่าธรรมดา/ลูกกระจ๊อก, `AlphaWolf` = จ่าฝูง ตัวใหญ่พอให้ขี่):
-ตั้งใจไม่ให้เห็นร่องรอย corrupted เลย แบ่งเป็นชิ้น ตัว หัว หาง และขาบน/ล่าง × 4
-`CyclopsKit` จะสร้าง Motor6D ให้อัตโนมัติ เลยใช้ Animation Editor ทำแอนิเมชันต่อได้ทันที
+**หมาป่า** (`Wolf` = หมาป่าธรรมดา/ลูกกระจ๊อก, `AlphaWolf` = จ่าฝูง ใหญ่กว่า 1.45 เท่า):
+ตัวเป็นชิ้นเดียวผิวเรียบ มี **rig กระดูกจริง** 21 ชิ้น พร้อมแอนิเมชัน `Idle` และ `Walk`
+สร้างด้วย `wolf_rig.py` และตั้งใจไม่ให้เห็นร่องรอย corrupted
+
+- Import `export/creatures/Wolf.fbx` (Import 3D แล้วให้เป็น rig)
+- เอา Model ที่ได้ไปวางใน `CyclopsAssets/Creatures/Wolf`
+- แอนิเมชัน: เปิด Animation Editor ที่ตัวหมาป่า ▸ Import ▸ From FBX Animation
+  ▸ เลือก `Wolf_Idle.fbx` / `Wolf_Walk.fbx` แล้ว Publish
 
 ## ตั้งค่าใน Roblox Studio (ครั้งเดียว)
 
@@ -87,7 +92,7 @@ python3 cyclops/build_all.py            # เพิ่ม --no-render ถ้า�
 | `kit.py` | เครื่องมือเรขาคณิต, UV, export |
 | `outfits/` | ชุดแต่ละตัว (`stage1`, `knights`, `elite`, `king`, ส่วนประกอบร่วมใน `common`) |
 | `weapons.py` | อาวุธ |
-| `creatures.py` | หมาป่า |
+| `wolf_rig.py` | หมาป่าแบบมี rig + แอนิเมชัน (`--alpha` สำหรับจ่าฝูง) |
 | `build_all.py` | สร้าง FBX, `CyclopsData.lua` และภาพ preview |
 
 อยากเพิ่มตัวใหม่ ให้เขียนฟังก์ชันคืนค่า `Outfit` แล้วเพิ่มเข้า `groups` ใน `build_all.py`

@@ -361,7 +361,7 @@ return {
 			grip = CFrame.Angles(math.rad(0), math.rad(0), math.rad(0)),
 			pieces = {
 				["Blade"] = { size = Vector3.new(0.4000, 3.0000, 0.1100), offset = Vector3.new(-0.0000, 1.9200, 0.0000) },
-				["Glow"] = { size = Vector3.new(0.0936, 1.1332, 0.1966), offset = Vector3.new(0.0592, 1.1924, 0.0334) },
+				["Glow"] = { size = Vector3.new(0.2637, 0.1243, 0.2713), offset = Vector3.new(-0.0018, 1.6248, -0.0440) },
 				["Guard"] = { size = Vector3.new(1.3873, 0.1295, 0.1600), offset = Vector3.new(-0.0000, 0.3848, 0.0000) },
 				["Handle"] = { size = Vector3.new(0.1800, 0.6400, 0.1800), offset = Vector3.new(-0.0000, 0.0000, 0.0000) },
 				["Pommel"] = { size = Vector3.new(0.1650, 0.2200, 0.1905), offset = Vector3.new(-0.0000, -0.4200, 0.0000) },
@@ -373,7 +373,7 @@ return {
 			grip = CFrame.Angles(math.rad(0), math.rad(0), math.rad(0)),
 			pieces = {
 				["Blade"] = { size = Vector3.new(0.4600, 3.4000, 0.1100), offset = Vector3.new(-0.0000, 2.1200, 0.0000) },
-				["Glow"] = { size = Vector3.new(0.3215, 1.4128, 0.4155), offset = Vector3.new(-0.0125, 1.4837, -0.0043) },
+				["Glow"] = { size = Vector3.new(0.2526, 1.3432, 0.4523), offset = Vector3.new(0.0216, 1.5498, -0.0007) },
 				["Guard"] = { size = Vector3.new(1.6873, 0.3785, 0.1600), offset = Vector3.new(-0.0000, 0.5093, 0.0000) },
 				["Handle"] = { size = Vector3.new(0.1800, 0.6400, 0.1800), offset = Vector3.new(-0.0000, 0.0000, 0.0000) },
 				["Pommel"] = { size = Vector3.new(0.1650, 0.2200, 0.1905), offset = Vector3.new(-0.0000, -0.4200, 0.0000) },
@@ -381,37 +381,6 @@ return {
 		},
 	},
 	creatures = {
-		Wolf = {
-			root = "Torso",
-			parts = {
-				["BackLeftLowerLeg"] = { size = Vector3.new(0.3200, 1.0289, 0.7554), offset = Vector3.new(-0.3000, 0.5144, 0.7311), parent = "BackLeftUpperLeg", pivot = Vector3.new(-0.3000, 1.0000, 0.7500) },
-				["BackLeftUpperLeg"] = { size = Vector3.new(0.4989, 1.2600, 0.8315), offset = Vector3.new(-0.3000, 1.4700, 0.8000), parent = "Torso", pivot = Vector3.new(-0.3000, 1.8500, 0.7500) },
-				["BackRightLowerLeg"] = { size = Vector3.new(0.3200, 1.0289, 0.7554), offset = Vector3.new(0.3000, 0.5144, 0.7311), parent = "BackRightUpperLeg", pivot = Vector3.new(0.3000, 1.0000, 0.7500) },
-				["BackRightUpperLeg"] = { size = Vector3.new(0.4989, 1.2600, 0.8315), offset = Vector3.new(0.3000, 1.4700, 0.8000), parent = "Torso", pivot = Vector3.new(0.3000, 1.8500, 0.7500) },
-				["FrontLeftLowerLeg"] = { size = Vector3.new(0.3200, 1.0200, 0.5466), offset = Vector3.new(-0.3000, 0.5100, -0.9733), parent = "FrontLeftUpperLeg", pivot = Vector3.new(-0.3000, 1.0000, -0.8500) },
-				["FrontLeftUpperLeg"] = { size = Vector3.new(0.4435, 1.1800, 0.5913), offset = Vector3.new(-0.3000, 1.4300, -0.8000), parent = "Torso", pivot = Vector3.new(-0.3000, 1.8500, -0.8500) },
-				["FrontRightLowerLeg"] = { size = Vector3.new(0.3200, 1.0200, 0.5466), offset = Vector3.new(0.3000, 0.5100, -0.9733), parent = "FrontRightUpperLeg", pivot = Vector3.new(0.3000, 1.0000, -0.8500) },
-				["FrontRightUpperLeg"] = { size = Vector3.new(0.4435, 1.1800, 0.5913), offset = Vector3.new(0.3000, 1.4300, -0.8000), parent = "Torso", pivot = Vector3.new(0.3000, 1.8500, -0.8500) },
-				["Head"] = { size = Vector3.new(1.2477, 1.3275, 1.7057), offset = Vector3.new(-0.0000, 2.6937, -1.8871), parent = "Torso", pivot = Vector3.new(-0.0000, 2.3000, -1.3000) },
-				["Tail"] = { size = Vector3.new(0.4108, 0.8236, 1.5547), offset = Vector3.new(-0.0054, 1.8264, 1.9205), parent = "Torso", pivot = Vector3.new(-0.0000, 2.1500, 1.3500) },
-				["Torso"] = { size = Vector3.new(1.7487, 1.5295, 2.9869), offset = Vector3.new(-0.0000, 2.0148, 0.0044) },
-			},
-		},
-		AlphaWolf = {
-			root = "Torso",
-			parts = {
-				["BackLeftLowerLeg"] = { size = Vector3.new(0.4960, 1.5948, 1.1709), offset = Vector3.new(-0.4650, 0.7974, 1.1332), parent = "BackLeftUpperLeg", pivot = Vector3.new(-0.4650, 1.5500, 1.1625) },
-				["BackLeftUpperLeg"] = { size = Vector3.new(0.7733, 1.9530, 1.2888), offset = Vector3.new(-0.4650, 2.2785, 1.2400), parent = "Torso", pivot = Vector3.new(-0.4650, 2.8675, 1.1625) },
-				["BackRightLowerLeg"] = { size = Vector3.new(0.4960, 1.5948, 1.1709), offset = Vector3.new(0.4650, 0.7974, 1.1332), parent = "BackRightUpperLeg", pivot = Vector3.new(0.4650, 1.5500, 1.1625) },
-				["BackRightUpperLeg"] = { size = Vector3.new(0.7733, 1.9530, 1.2888), offset = Vector3.new(0.4650, 2.2785, 1.2400), parent = "Torso", pivot = Vector3.new(0.4650, 2.8675, 1.1625) },
-				["FrontLeftLowerLeg"] = { size = Vector3.new(0.4960, 1.5810, 0.8473), offset = Vector3.new(-0.4650, 0.7905, -1.5086), parent = "FrontLeftUpperLeg", pivot = Vector3.new(-0.4650, 1.5500, -1.3175) },
-				["FrontLeftUpperLeg"] = { size = Vector3.new(0.6874, 1.8290, 0.9165), offset = Vector3.new(-0.4650, 2.2165, -1.2400), parent = "Torso", pivot = Vector3.new(-0.4650, 2.8675, -1.3175) },
-				["FrontRightLowerLeg"] = { size = Vector3.new(0.4960, 1.5810, 0.8473), offset = Vector3.new(0.4650, 0.7905, -1.5086), parent = "FrontRightUpperLeg", pivot = Vector3.new(0.4650, 1.5500, -1.3175) },
-				["FrontRightUpperLeg"] = { size = Vector3.new(0.6874, 1.8290, 0.9165), offset = Vector3.new(0.4650, 2.2165, -1.2400), parent = "Torso", pivot = Vector3.new(0.4650, 2.8675, -1.3175) },
-				["Head"] = { size = Vector3.new(1.9340, 2.0576, 2.6439), offset = Vector3.new(-0.0000, 4.1753, -2.9250), parent = "Torso", pivot = Vector3.new(-0.0000, 3.5650, -2.0150) },
-				["Tail"] = { size = Vector3.new(0.6963, 1.2766, 2.3135), offset = Vector3.new(-0.0288, 2.8310, 2.9286), parent = "Torso", pivot = Vector3.new(-0.0000, 3.3325, 2.0925) },
-				["Torso"] = { size = Vector3.new(2.9420, 2.2430, 4.5943), offset = Vector3.new(0.0176, 3.0590, -0.0109) },
-			},
-		},
+
 	},
 }

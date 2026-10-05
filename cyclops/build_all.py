@@ -6,7 +6,7 @@ Outputs
   export/cyclops_texture.png        shared 1024 px texture atlas (also embedded in every FBX)
   export/outfits/<Outfit>.fbx       R15 outfit pieces named <R15Part>_<Kind>
   export/weapons/<Weapon>.fbx       weapon parts (Handle + others)
-  export/creatures/<Creature>.fbx   jointed creature parts (wolves)
+  (wolves: see wolf_rig.py -> export/creatures/)
   roblox/CyclopsData.lua            generated sizes/offsets/joints for every model
   renders/*.png                     preview lineups
 """
@@ -91,21 +91,6 @@ def lua_weapon(weapon, objs):
     for o in sorted(objs, key=lambda o: o.name):
         size, offset = piece_bounds(o)
         lines.append(f'\t\t\t\t["{o.name}"] = {{ size = {lua_vec(size)}, offset = {lua_vec(offset)} }},')
-    lines += ['\t\t\t},', '\t\t},']
-    return "\n".join(lines)
-
-
-def lua_creature(creature, objs):
-    lines = [f'\t\t{creature.name} = {{', f'\t\t\troot = "{creature.root}",', '\t\t\tparts = {']
-    for o in sorted(objs, key=lambda o: o.name):
-        size, offset = piece_bounds(o)
-        joint = creature.joints.get(o.name)
-        jtxt = ""
-        if joint:
-            parent, pivot = joint
-            px, py, pz = pivot
-            jtxt = f', parent = "{parent}", pivot = {lua_vec((-px, pz, py))}'
-        lines.append(f'\t\t\t\t["{o.name}"] = {{ size = {lua_vec(size)}, offset = {lua_vec(offset)}{jtxt} }},')
     lines += ['\t\t\t},', '\t\t},']
     return "\n".join(lines)
 
@@ -217,16 +202,6 @@ def build_weapon_objects(weapon, mats):
     return objs
 
 
-def build_creature_objects(creature, mats):
-    objs = []
-    for part, piece in creature.pieces.items():
-        o = piece.to_object(part, mats[0], (0, 0, 0))
-        if creature.k != 1.0:
-            o.data.transform(Matrix.Scale(creature.k, 4))
-        objs.append(o)
-    return objs
-
-
 def main():
     no_render = "--no-render" in sys.argv
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -236,7 +211,6 @@ def main():
     img = bpy.data.images.load(kit.build_atlas(os.path.join(EXPORT_DIR, "cyclops_texture.png")))
     mats = make_materials(img)
 
-    import creatures
     import weapons
     from outfits import elite, king, knights, stage1
     groups = {
@@ -262,13 +236,7 @@ def main():
         release_names(objs, weapon.name)
         weapon_objs[weapon.name] = objs
         print(f"{weapon.name}: {len(objs)} parts, {sum(len(o.data.polygons) for o in objs)} faces")
-    for creature in creatures.all_creatures():
-        objs = build_creature_objects(creature, mats)
-        export_fbx(os.path.join(EXPORT_DIR, "creatures", creature.name + ".fbx"), objs)
-        creature_lua.append(lua_creature(creature, objs))
-        release_names(objs, creature.name)
-        creature_objs[creature.name] = objs
-        print(f"{creature.name}: {len(objs)} parts, {sum(len(o.data.polygons) for o in objs)} faces")
+    # Wolves are skinned rigs built by wolf_rig.py (export/creatures), not part of this build.
     write_data(outfit_lua, weapon_lua, creature_lua)
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(EXPORT_DIR, "cyclops_roster.blend"))
     if no_render:
@@ -332,19 +300,6 @@ def render_previews(groups, outfit_objs, weapons_mod, creature_objs, mats):
            ((x - 1.5) / 2, 0, 2.4), x + 0.4, (1800, int(1800 * 6.0 / (x + 0.4))))
     place(shown, Vector((0, 0, -100)))
 
-    # Wolves in profile, with a fresh wolf rider for scale.
-    from outfits import stage1
-    shown = []
-    for name, dy in (("Wolf", -5.3), ("AlphaWolf", 0.6)):
-        objs = creature_objs[name]
-        place(objs, Vector((0, dy, 0)))
-        shown += objs
-    rider = build_outfit_objects(stage1.wolf_rider(), mats)
-    place(rider, Vector((0, 7.5, 0)))
-    shown += rider + body_objects(mats[0], Vector((0, 7.5, 0)))
-    set_visible(bpy.data.objects, shown)
-    render(scene, cam, os.path.join(RENDER_DIR, "wolves_side.png"), (40, 0.8, 3.2), (0, 0.8, 3.2), 19.5,
-           (1800, 800))
 
 
 def weapons_mod_objs(weapons_mod, mats):
