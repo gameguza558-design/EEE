@@ -17,6 +17,8 @@
 		Kit.dress(character, outfitName, { shield = true?, stripAvatar = true?, accessories = { assetId, ... }? })
 		  accessories: catalog accessories (e.g. hair you own) loaded by asset ID; an
 		  accessory that replaces the hair also hides the outfit's own "Head_Hair" piece.
+		  accessoryColor (Color3, optional): recolour them; outfits like the King have a
+		  default hairTint so bought hair blends with the body.
 		Kit.makeWeapon(weaponName) -> Tool
 		Kit.equip(character, weaponName) -> Tool    (NPCs hold it, players get it in the Backpack)
 		Kit.spawnCreature(creatureName, cframe) -> clone of the rigged wolf, standing at cframe
@@ -155,14 +157,34 @@ function Kit.dress(character, outfitName, options)
 		part.Parent = holder
 	end
 	if hasAccessories then
-		Kit.addAccessories(character, options.accessories)
+		Kit.addAccessories(character, options.accessories, options.accessoryColor or info.hairTint)
 	end
 	return holder
 end
 
 -- Load catalog accessories (hair, etc.) by asset ID and put them on the character.
 -- InsertService can load assets the game's creator owns or that Roblox allows.
-function Kit.addAccessories(character, assetIds)
+-- Recolour a loaded accessory so it matches the outfit (e.g. the King's pale lilac hair).
+-- Works for MeshPart and SpecialMesh handles; a SurfaceAppearance (fixed PBR textures)
+-- is removed because it cannot be recoloured.
+function Kit.tintAccessory(accessory, color)
+	for _, item in accessory:GetDescendants() do
+		if item:IsA("SurfaceAppearance") then
+			item:Destroy()
+		elseif item:IsA("SpecialMesh") then
+			item.TextureId = ""
+			item.VertexColor = Vector3.new(color.R, color.G, color.B)
+		elseif item:IsA("MeshPart") then
+			item.TextureID = ""
+		end
+		if item:IsA("BasePart") then
+			item.Color = color
+			item.Material = Enum.Material.SmoothPlastic
+		end
+	end
+end
+
+function Kit.addAccessories(character, assetIds, tint)
 	local InsertService = game:GetService("InsertService")
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
@@ -173,6 +195,9 @@ function Kit.addAccessories(character, assetIds)
 		if ok and result then
 			local accessory = result:FindFirstChildWhichIsA("Accessory", true)
 			if accessory then
+				if tint then
+					Kit.tintAccessory(accessory, tint)
+				end
 				humanoid:AddAccessory(accessory)
 			end
 			result:Destroy()

@@ -456,6 +456,7 @@ def cyclops_king(sculpted=False):
     ch = Character("CyclopsKing3D" if sculpted else "CyclopsKing", glow=PINK)
     if sculpted:
         ch.sculpt = king_bumps()
+    ch.outfit.hair_tint = (232, 220, 242)  # bought hair is recoloured to this pale lilac in game
     skin = (214, 192, 204)
     p = Painter(seed=41)
     skin_all(p, skin)

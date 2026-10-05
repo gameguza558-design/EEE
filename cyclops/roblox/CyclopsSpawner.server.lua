@@ -8,6 +8,7 @@
 			Attribute CyclopsWeapon  (string)  e.g. "MidSword"      (optional)
 			Attribute CyclopsShield  (bool)    true for sword + shield (knights only)
 			Attribute CyclopsAccessories (string) asset IDs, e.g. "1234567,7654321" - hair you own etc.
+			Attribute CyclopsAccessoryColor (Color3) recolour those accessories (the King has a default)
 
 		Any Part used as a spawn marker
 			Attribute CyclopsCreature (string) "Wolf" or "AlphaWolf"
@@ -40,7 +41,11 @@ local function setupNpc(model)
 	for id in string.gmatch(model:GetAttribute("CyclopsAccessories") or "", "%d+") do
 		table.insert(accessories, id)
 	end
-	Kit.dress(model, outfit, { shield = model:GetAttribute("CyclopsShield") == true, accessories = accessories })
+	Kit.dress(model, outfit, {
+		shield = model:GetAttribute("CyclopsShield") == true,
+		accessories = accessories,
+		accessoryColor = model:GetAttribute("CyclopsAccessoryColor"), -- Color3 attribute, optional
+	})
 	local weapon = model:GetAttribute("CyclopsWeapon")
 	if weapon then
 		Kit.equip(model, weapon)

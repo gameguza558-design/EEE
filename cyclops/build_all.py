@@ -74,7 +74,10 @@ def lua_color(rgb):
 
 
 def lua_outfit(outfit, objs):
-    lines = [f'\t\t{outfit.name} = {{', f'\t\t\tglow = {lua_color(outfit.glow)},', '\t\t\tpieces = {']
+    lines = [f'\t\t{outfit.name} = {{', f'\t\t\tglow = {lua_color(outfit.glow)},']
+    if getattr(outfit, "hair_tint", None):
+        lines.append(f'\t\t\thairTint = {lua_color(outfit.hair_tint)},')
+    lines.append('\t\t\tpieces = {')
     for o in sorted(objs, key=lambda o: o.name):
         size, offset = piece_bounds(o)
         lines.append(f'\t\t\t\t["{o.name}"] = {{ size = {lua_vec(size)}, offset = {lua_vec(offset)} }},')
