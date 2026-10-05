@@ -273,8 +273,9 @@ def hips(o, S):
         for (a0, a1), col in (((-60, 40), P), ((50, 120), P2)):
             if s < 0:
                 a0, a1 = -a1, -a0
-            curved_plate(lt, (s * 0.5, 0.0), 0.74, a0, a1, -1.45, -0.35, T, thick=0.04, flare=0.14)
-            curved_plate(lt, (s * 0.5, 0.0), 0.72, a0 + 3, a1 - 3, -1.38, -0.35, col, thick=0.05, flare=0.14)
+            # Gold underlay just behind and slightly larger, so only a rim of it shows.
+            curved_plate(lt, (s * 0.5, 0.0), 0.72, a0 - 4, a1 + 4, -1.47, -0.35, T, thick=0.04, flare=0.14)
+            curved_plate(lt, (s * 0.5, 0.0), 0.76, a0, a1, -1.4, -0.35, col, thick=0.05, flare=0.14)
     if S["tabard"]:
         xs = [-0.42, -0.28, -0.14, 0.0, 0.14, 0.28, 0.42]
         bottoms = [-2.5 - 0.35 * (1 - abs(x) / 0.42) for x in xs]

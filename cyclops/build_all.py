@@ -195,7 +195,7 @@ WEAPON_OF = {
     "EliteOneHorn": "OneHornGreatsword", "KnightApprenticeInfected": "ApprenticeAxe",
     "KnightMid": "MidSword", "KnightHigh": "HighAxe",
 }
-SIDEWAYS = {"HunterBow", "WoodcutterAxe", "ApprenticeAxe", "MidAxe", "HighAxe", "RoyalHalberd", "SerratedCleaver"}
+SIDEWAYS = {"HunterBow", "WoodcutterAxe", "ApprenticeAxe", "MidAxe", "HighAxe", "RoyalHalberd", "SerratedCleaver", "BlightScythe", "CrystalWarAxe"}
 
 
 def build_weapon_objects(weapon, mats):
