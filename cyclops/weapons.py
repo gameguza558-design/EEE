@@ -82,10 +82,10 @@ def hoe():
     w = Weapon("Hoe", damage=11, cooldown=0.9, two_handed=True)
     haft(w, -1.0, 2.5, 0.07, rings=(2.35,))
     h = w("Head")
-    h.box((0.18, 0.22, 0.22), "iron", pos=(0, 0, 2.48))  # eye around the haft
-    # Blade hangs forward and down from the top of the haft.
-    h.box((0.62, 0.55, 0.05), "iron", pos=(0, -0.38, 2.36), rot=(-70, 0, 0), top=(1.15, 1))
-    h.box((0.66, 0.06, 0.07), "blade", pos=(0, -0.58, 2.1), rot=(-70, 0, 0))
+    h.box((0.2, 0.24, 0.26), "iron", pos=(0, 0, 2.45))  # eye around the haft
+    # Broad blade sticking forward from the top of the haft, angled down a little.
+    h.box((0.62, 0.62, 0.06), "iron", pos=(0, -0.38, 2.4), rot=(14, 0, 0), top=(1.12, 1))
+    h.box((0.7, 0.07, 0.08), "blade", pos=(0, -0.7, 2.33), rot=(14, 0, 0))
     return w
 
 

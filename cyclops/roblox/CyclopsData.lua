@@ -348,7 +348,7 @@ return {
 			grip = CFrame.Angles(math.rad(0), math.rad(0), math.rad(0)),
 			pieces = {
 				["Handle"] = { size = Vector3.new(0.1637, 3.5000, 0.1890), offset = Vector3.new(-0.0000, 0.7500, 0.0000) },
-				["Head"] = { size = Vector3.new(0.7130, 0.5671, 0.7331), offset = Vector3.new(-0.0000, 2.3434, -0.2566) },
+				["Head"] = { size = Vector3.new(0.7000, 0.2973, 0.8636), offset = Vector3.new(-0.0000, 2.4314, -0.3118) },
 			},
 		},
 		Spade = {
@@ -467,7 +467,7 @@ return {
 			grip = CFrame.Angles(math.rad(0), math.rad(0), math.rad(0)),
 			pieces = {
 				["Blade"] = { size = Vector3.new(0.4000, 3.0000, 0.1100), offset = Vector3.new(-0.0000, 1.9200, 0.0000) },
-				["Glow"] = { size = Vector3.new(0.0846, 0.8722, 0.1982), offset = Vector3.new(-0.0037, 1.4947, -0.0379) },
+				["Glow"] = { size = Vector3.new(0.1277, 0.7116, 0.1662), offset = Vector3.new(-0.0654, 1.4341, 0.0253) },
 				["Guard"] = { size = Vector3.new(1.3873, 0.1295, 0.1600), offset = Vector3.new(-0.0000, 0.3848, 0.0000) },
 				["Handle"] = { size = Vector3.new(0.1800, 0.6400, 0.1800), offset = Vector3.new(-0.0000, 0.0000, 0.0000) },
 				["Pommel"] = { size = Vector3.new(0.1650, 0.2200, 0.1905), offset = Vector3.new(-0.0000, -0.4200, 0.0000) },
@@ -479,7 +479,7 @@ return {
 			grip = CFrame.Angles(math.rad(0), math.rad(0), math.rad(0)),
 			pieces = {
 				["Blade"] = { size = Vector3.new(0.4600, 3.4000, 0.1100), offset = Vector3.new(-0.0000, 2.1200, 0.0000) },
-				["Glow"] = { size = Vector3.new(0.2878, 1.2566, 0.4370), offset = Vector3.new(-0.0133, 1.3712, 0.0147) },
+				["Glow"] = { size = Vector3.new(0.3373, 1.3073, 0.4901), offset = Vector3.new(0.0059, 1.4405, 0.0108) },
 				["Guard"] = { size = Vector3.new(1.6873, 0.3785, 0.1600), offset = Vector3.new(-0.0000, 0.5093, 0.0000) },
 				["Handle"] = { size = Vector3.new(0.1800, 0.6400, 0.1800), offset = Vector3.new(-0.0000, 0.0000, 0.0000) },
 				["Pommel"] = { size = Vector3.new(0.1650, 0.2200, 0.1905), offset = Vector3.new(-0.0000, -0.4200, 0.0000) },

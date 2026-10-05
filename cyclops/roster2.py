@@ -559,7 +559,7 @@ def render_lineups(built, weapon_objs, mats):
     # Weapons sheet.
     shown, x = [], 0.0
     for name, objs in weapon_objs.items():
-        build_all.place(objs, Vector((x, 0, 1.6)), 1.0, 90 if name in build_all.SIDEWAYS | {"Hoe", "Sickle", "Scythe"} else 0)
+        build_all.place(objs, Vector((x, 0, 1.6)), 1.0, 90 if name in build_all.SIDEWAYS | {"Sickle", "Scythe", "Hoe"} else 0)
         shown += objs
         x += 1.6
     build_all.set_visible(bpy.data.objects, shown)
