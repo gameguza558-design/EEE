@@ -486,37 +486,43 @@ def radiant_greatsword():
 
 
 def abyss_greatsword():
-    """Black Knight: one of a pair of enormous straight greatswords (as long as he is
-    tall) with an open slot down the blade, an axe-head tip and silver curved quillons.
+    """Black Knight (after Momon's blades): one of a pair of huge straight greatswords. A
+    broad dark blade with bright edges and an ember-lit groove, flaring at the end into a
+    crescent head; a chunky layered steel guard, a long wrapped grip and a spiked pommel.
     Wielded one in each hand."""
+    from outfits.parade import lens, rshell
     w = Weapon("AbyssGreatsword", damage=36, cooldown=0.9, glow=EMBER)
     w.dual = True
-    long_grip(w, -0.8, 0.7)
+    long_grip(w, -1.0, 0.6, wrap="leather_strap", ring="plate_dark", r=0.105)
     b, g = w("Blade"), w("Glow")
-    b.loft([(0.95, diamond(0.44, 0.085)), (1.7, diamond(0.46, 0.085))], "blade_dark")
-    for s in (1, -1):  # the two rails either side of the open slot
-        rail = [(s * 0.17, 0.07), (s * 0.17, -0.07), (s * 0.46, 0.0)]
-        b.loft([(1.7, rail), (6.4, [(x * 0.96, y) for x, y in rail])], "blade_dark")
-        b.box((0.03, 0.05, 4.7), "blade", pos=(s * 0.45, 0, 4.05))  # bright cutting edge
-    b.loft([(6.4, diamond(0.44, 0.08)), (6.9, diamond(0.42, 0.075))], "blade_dark")
-    # The tip ends in an axe head: a broad blade flaring to one side with a hooked beard.
-    head = [(-0.42, 6.85), (0.42, 6.85), (0.6, 7.0), (0.98, 7.3), (0.92, 7.8), (0.4, 8.0), (-0.22, 7.82), (-0.42, 7.35)]
-    b.loft([(-0.07, head), (0.07, head)], "blade_dark", rot=(90, 0, 0))
-    edge = [(0.9, 7.25), (1.06, 7.32), (1.0, 7.86), (0.86, 7.82)]
-    b.loft([(-0.035, edge), (0.035, edge)], "blade", rot=(90, 0, 0))  # bright cutting edge
-    b.spike((0.92, 0, 7.3), (0.4, 0, -1), 0.4, 0.06, "blade_dark", sides=4)  # beard hook
-    b.spike((-0.3, 0, 7.75), (-0.3, 0, 1), 0.35, 0.06, "blade_dark", sides=4)
-    g.box((0.05, 0.05, 4.6), "glow", pos=(0, 0, 4.05))  # ember core glowing in the slot
-    b.box((0.94, 0.2, 0.08), "gold", pos=(0, 0, 1.0))
+
+    def hexa(hw, t, dx=0.0):
+        e = min(0.12, hw * 0.3)
+        return [(dx + hw, 0), (dx + hw - e, t), (dx - hw + e, t), (dx - hw, 0), (dx - hw + e, -t), (dx + hw - e, -t)]
+    b.loft([(1.2, hexa(0.46, 0.075)), (2.0, hexa(0.5, 0.075)), (6.3, hexa(0.48, 0.07)), (6.6, hexa(0.54, 0.068, 0.03)),
+            (6.85, hexa(0.76, 0.064, 0.09)), (7.02, hexa(0.98, 0.06, 0.14)), (7.12, hexa(0.86, 0.055, 0.14)),
+            (7.2, hexa(0.55, 0.05, 0.12))], "plate_black")
+    for s in (1, -1):  # bright cutting edges
+        b.box((0.05, 0.08, 4.4), "blade", pos=(s * 0.49, 0, 4.1))
+    b.box((0.12, 0.17, 3.0), "black", pos=(0.12, 0, 3.0))  # groove
+    g.box((0.05, 0.18, 2.8), "glow", pos=(0.12, 0, 3.0))
+    # Guard: layered steel plates flaring up round the blade like a pauldron.
     gd = w("Guard")
-    gd.box((0.6, 0.3, 0.3), "blade", pos=(0, 0, 0.82))
-    for s in (1, -1):  # silver quillons curving up toward the blade
-        arc_boxes(gd, (s * 0.25, 1.4), 0.62, 270, 270 + s * 70, 5, (0.14, 0.22), "blade")
-        gd.spike((s * 0.75, 0, 1.4), (s * 0.4, 0, 1), 0.4, 0.07, "blade", sides=4)
-    gem(gd, (0, -0.16, 0.82), 0.11)
-    gem(gd, (0, 0.16, 0.82), 0.11)
+    rshell(gd, [(0.55, 0.28, 0.22), (0.9, 0.48, 0.28), (1.3, 0.6, 0.3)], "plate_trim", p=2.4, n=16)
+    for s in (1, -1):
+        rshell(gd, [(0.62, 0.16, 0.24, {"dx": s * 0.5}), (1.3, 0.26, 0.28, {"dx": s * 0.72})], "blade", p=2.4, n=12)
+        gd.spike((s * 0.55, 0, 0.66), (s * 0.35, 0, -1), 0.4, 0.12, "plate_trim", sides=4)
+        gd.spike((s * 0.8, 0, 1.25), (s * 0.5, 0, 0.6), 0.3, 0.1, "blade", sides=4)
+        for y in (1, -1):
+            lens(gd, (s * 0.25, y * 0.28, 0.95), (s * 0.2, y, 0.1), 0.2, 0.3, 0.08, "plate_trim", n=10)
+    # Spiked pommel.
     pm = w("Pommel")
-    pm.loft([(-0.82, diamond(0.13, 0.13)), (-0.98, diamond(0.2, 0.2))], "blade", tip=(0, 0, -1.4))
+    blob(pm, (0, 0, -1.2), (0.17, 0.17, 0.26), "plate_dark", sides=8, rings=4)
+    pm.spike((0, 0, -1.4), (0, 0, -1), 0.35, 0.1, "plate_dark", sides=4)
+    for k in range(4):
+        a = math.pi / 2 * k
+        pm.spike((0.15 * math.cos(a), 0.15 * math.sin(a), -1.2), (math.cos(a), math.sin(a), -0.3), 0.15, 0.05,
+                 "plate_trim", sides=4)
     return w
 
 

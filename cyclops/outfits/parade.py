@@ -101,7 +101,11 @@ STYLES = {
                   chest="emblem", gem="gem_blue", pauldron="round", crystals=3, spikes=False),
     "black": dict(plate="plate_black", plate2="plate_black", trim="gold", trim2="gold", knee="gold",
                   cape="cloth_royal", lining="cloth_dark", tabard=None, helm="dark", chest="muscle",
-                  gem="gem", pauldron="bladed", crystals=3, spikes=True),
+                  gem="gem", pauldron="great", pk=1.25, crystals=3, spikes=True, folds=0.18,
+                  # A voluminous cape draped over the great pauldrons and round the neck.
+                  cape_rings=[(1.5, 0.88, 0.0, 0.76, 125), (1.34, 2.95, 0.1, 1.24, 116), (0.6, 3.05, 0.3, 1.05, 100),
+                              (-0.4, 2.55, 0.65, 0.48, 80), (-2.0, 2.65, 0.8, 0.48, 74),
+                              (-3.72, 2.85, 0.95, 0.55, 70)]),
     "guard": dict(plate="blade", plate2="plate_white", trim="gold", trim2="gold_engraved", knee="blade",
                   cape="cloth_royal", lining="cloth_white", tabard="cloth_royal", helm="plume", chest="cross",
                   gem="gem", pauldron="round", crystals=4, spikes=False),
@@ -172,41 +176,83 @@ def dragoon_fins(o, S):
 
 # ---------------------------------------------------------------------------
 def helm(o, S):
+    """Each knight has his own helm shape. No eye shows: the vision slits glow instead."""
     h, g = o("Head"), o("Head", "Glow")
-    P, T = S["plate"], S["trim"]
-    rshell(h, [(-0.66, 0.7, 0.72, {"keel": 0.1}), (-0.2, 0.74, 0.76, {"keel": 0.14}), (0.25, 0.75, 0.76, {"keel": 0.1}),
-               (0.58, 0.64, 0.66), (0.76, 0.4, 0.42)], P, tip=(0, 0, 0.86))
-    trim(h, -0.64, 0.72, 0.75, T, keel=0.1)
-    trim(h, 0.3, 0.765, 0.775, T, h=0.06, keel=0.1)
-    # Visor: a pointed brow over a glowing eye slit, and a beaked faceplate below.
-    h.box((1.2, 0.2, 0.17), P, pos=(0, -0.8, 0.24), rot=(-14, 0, 0), top=(0.9, 1))
-    pipe(h, [(-0.6, -0.9, 0.18), (0, -0.95, 0.14), (0.6, -0.9, 0.18)], T)
-    h.box((1.0, 0.06, 0.11), "black", pos=(0, -0.86, 0.06))
-    g.box((0.82, 0.03, 0.04), "glow", pos=(0, -0.885, 0.06))
-    g.box((0.18, 0.04, 0.18), "glow", pos=(0, -0.885, 0.06), rot=(0, 45, 0))
-    rshell(h, [(-0.62, 0.5, 0.12, {"dy": -0.74}), (-0.05, 0.58, 0.14, {"dy": -0.76})], P, p=2.2)  # faceplate
-    pipe(h, [(0, -0.92, -0.05), (0, -0.92, -0.6)], T)
-    for x in (-0.3, -0.18, 0.18, 0.3):  # breaths
-        h.box((0.04, 0.05, 0.22), "black", pos=(x, -0.88, -0.3))
-    pipe(h, [(0, -0.82, 0.36), (0, -0.6, 0.68), (0, 0.0, 0.88), (0, 0.6, 0.66)], T, w=0.09, t=0.06)  # crest line
+    P, T, P2 = S["plate"], S["trim"], S["plate2"]
     kind = S["helm"]
+
+    def slit(x0, x1, z, y=-0.9, tilt=0.0, w=0.045):
+        """A black vision slot with a glowing core."""
+        cx, L = (x0 + x1) / 2, abs(x1 - x0)
+        h.box((L + 0.06, 0.06, w + 0.06), "black", pos=(cx, y + 0.02, z), rot=(0, tilt, 0))
+        g.box((L, 0.04, w), "glow", pos=(cx, y - 0.01, z), rot=(0, tilt, 0))
+
     if kind == "winged":
+        # White Knight - an armet with a projecting "hound-skull" visor, a crown of swept
+        # crest fins and small wings; two angled eye slots and glowing breaths on the snout.
+        rshell(h, [(-0.66, 0.7, 0.72), (-0.2, 0.74, 0.75), (0.25, 0.75, 0.75), (0.58, 0.64, 0.66), (0.76, 0.4, 0.42)],
+               P, tip=(0, 0, 0.86))
+        trim(h, -0.64, 0.72, 0.74, T)
+        lens(h, (0, -0.66, -0.12), (0, -1, -0.15), 0.62, 0.55, 0.5, P, p=2.2)  # snout visor
+        pipe(h, [(0, -1.0, 0.25), (0, -1.18, -0.1), (0, -1.02, -0.5)], T, w=0.07)
         for s in (1, -1):
-            for k in range(5):  # silver feathers with gold quills
-                d = (s * (0.55 - 0.08 * k), 0.35 + 0.15 * k, 0.75 + 0.12 * k)
-                fin(h, (s * 0.72, 0.05 + 0.1 * k, 0.32 + 0.05 * k), d, 1.25 - 0.13 * k, 0.15, 0.035, "plate_white",
-                    roll=90)
-                fin(h, (s * 0.74, 0.05 + 0.1 * k, 0.32 + 0.05 * k), d, 0.9 - 0.1 * k, 0.04, 0.05, T, roll=90)
-        lens(h, (0, -0.86, 0.42), (0, -1, 0.2), 0.11, 0.11, 0.1, "gem")
+            slit(s * 0.1, s * 0.48, 0.18, y=-0.98, tilt=s * -12)
+            for k in range(3):
+                g.box((0.05, 0.04, 0.05), "glow", pos=(s * (0.12 + 0.1 * k), -1.07, -0.28 - 0.06 * k))
+        for k in range(5):  # crown of swept crest fins
+            x = -0.3 + 0.15 * k
+            fin(h, (x, -0.35 + 0.05 * abs(x), 0.78), (x * 0.6, 0.7, 1), 0.85 - 0.25 * abs(x), 0.12, 0.035, P, roll=90)
+            fin(h, (x, -0.33 + 0.05 * abs(x), 0.8), (x * 0.6, 0.7, 1), 0.6 - 0.2 * abs(x), 0.03, 0.045, T, roll=90)
+        for s in (1, -1):
+            for k in range(3):  # small wings
+                d = (s * (0.5 - 0.1 * k), 0.45 + 0.15 * k, 0.75 + 0.12 * k)
+                fin(h, (s * 0.72, 0.15 + 0.1 * k, 0.3 + 0.05 * k), d, 0.85 - 0.12 * k, 0.13, 0.03, P, roll=90)
+                fin(h, (s * 0.74, 0.15 + 0.1 * k, 0.3 + 0.05 * k), d, 0.6 - 0.1 * k, 0.035, 0.045, T, roll=90)
+        lens(h, (0, -0.84, 0.48), (0, -1, 0.3), 0.1, 0.1, 0.09, "gem")
     elif kind == "dark":
+        # Black Knight - a tall, egg-shaped close helm with a sharp central keel, a
+        # single burning slit across the eyes and gold lines framing the visor.
+        rshell(h, [(-0.66, 0.68, 0.72, {"keel": 0.16}), (-0.2, 0.73, 0.76, {"keel": 0.24}),
+                   (0.3, 0.72, 0.75, {"keel": 0.2}), (0.68, 0.58, 0.62, {"keel": 0.1}), (0.92, 0.3, 0.34)],
+               P, tip=(0, 0.02, 1.08), p=2.3)
+        trim(h, -0.64, 0.7, 0.74, T, keel=0.16)
+        slit(-0.52, 0.52, 0.12, y=-0.9)
         for s in (1, -1):
-            for k in range(3):  # blade fins swept back from the temples
-                fin(h, (s * 0.62, -0.05 + 0.22 * k, 0.5 - 0.1 * k), (s * 0.35, 1, 0.5 - 0.12 * k),
-                    1.6 - 0.3 * k, 0.17, 0.04, P, roll=90)
-                fin(h, (s * 0.66, -0.05 + 0.22 * k, 0.52 - 0.1 * k), (s * 0.35, 1, 0.5 - 0.12 * k),
-                    1.1 - 0.2 * k, 0.04, 0.05, T, roll=90)
-        fin(h, (0, -0.3, 0.8), (0, 0.6, 1), 0.9, 0.05, 0.16, P)  # centre crest blade
+            pipe(h, [(s * 0.05, -1.0, 0.24), (s * 0.4, -0.88, 0.26), (s * 0.62, -0.62, 0.22), (s * 0.66, -0.4, -0.2),
+                     (s * 0.4, -0.78, -0.55), (s * 0.05, -0.96, -0.62)], T)
+            fin(h, (s * 0.55, 0.1, 0.62), (s * 0.4, 0.8, 0.7), 0.75, 0.12, 0.035, P, roll=90)  # swept spikes
+            fin(h, (s * 0.57, 0.1, 0.64), (s * 0.4, 0.8, 0.7), 0.5, 0.03, 0.045, T, roll=90)
+        pipe(h, [(0, -0.98, 0.3), (0, -0.8, 0.72), (0, -0.2, 1.02), (0, 0.5, 0.8)], T, w=0.07)
+    elif kind == "plume":
+        # Royal Guard - a flat-topped great helm with a cross-shaped glowing slot.
+        rshell(h, [(-0.68, 0.72, 0.74), (0.0, 0.75, 0.76), (0.6, 0.72, 0.73), (0.74, 0.62, 0.64)], P, p=3.4)
+        trim(h, -0.66, 0.74, 0.76, T, p=3.4)
+        trim(h, 0.6, 0.735, 0.745, T, p=3.4)
+        slit(-0.55, 0.55, 0.1, y=-0.8)
+        h.box((0.08, 0.06, 0.55), "black", pos=(0, -0.79, -0.2))
+        g.box((0.04, 0.04, 0.5), "glow", pos=(0, -0.81, -0.2))
+        pipe(h, [(0, -0.82, 0.55), (0, -0.82, -0.62)], T, w=0.09)
+        for s in (1, -1):
+            for k in range(4):  # breath holes
+                g.box((0.04, 0.04, 0.04), "glow", pos=(s * (0.22 + 0.1 * (k % 2)), -0.8, -0.2 - 0.1 * k))
+    elif kind == "halo":
+        # Paladin - a sallet: a rounded bowl sweeping into a long tail at the back, a deep
+        # bevor over the jaw, the eye slit glowing in the gap between them.
+        rshell(h, [(-0.05, 0.76, 0.78, {"dy": 0.08}), (0.4, 0.74, 0.76), (0.72, 0.5, 0.52)], P, tip=(0, 0, 0.86))
+        rshell(h, [(-0.35, 0.8, 0.5, {"dy": 0.75}), (0.0, 0.76, 0.5, {"dy": 0.5})], P2)  # tail
+        trim(h, -0.03, 0.775, 0.79, T, dy=0.08)
+        rshell(h, [(-0.7, 0.62, 0.66, {"keel": 0.12}), (-0.05, 0.72, 0.76, {"keel": 0.16})], P)  # bevor
+        trim(h, -0.06, 0.73, 0.77, T, keel=0.16)
+        slit(-0.55, 0.55, 0.04, y=-0.84, w=0.07)
     elif kind == "dragon":
+        # Dragon Knight - a sharp dragon-snout visor with two angled glowing eye slots.
+        rshell(h, [(-0.66, 0.7, 0.72, {"keel": 0.1}), (-0.2, 0.74, 0.76, {"keel": 0.14}),
+                   (0.25, 0.75, 0.76, {"keel": 0.1}), (0.58, 0.64, 0.66), (0.76, 0.4, 0.42)], P, tip=(0, 0, 0.86))
+        trim(h, -0.64, 0.72, 0.75, T, keel=0.1)
+        lens(h, (0, -0.68, -0.15), (0, -1, -0.35), 0.5, 0.45, 0.62, P, p=1.8)  # snout
+        for s in (1, -1):
+            slit(s * 0.08, s * 0.5, 0.2, y=-0.93, tilt=s * -25)
+    if kind == "dragon":
         for side in (1, -1):
             for k in range(3):  # curved horns sweeping back from the temples
                 sweep(h, (side * 0.62, -0.1 + 0.25 * k, 0.45 - 0.1 * k), (side * 0.3, 1, 0.6 - 0.15 * k),
@@ -223,10 +269,10 @@ def helm(o, S):
             a = 2 * math.pi * (k + 0.5) / 10
             g.spike((1.22 * math.cos(a), 1.0, 0.4 + 1.22 * math.sin(a)), (math.cos(a), 0, math.sin(a)),
                     0.5 if k % 2 else 0.32, 0.06, "glow", sides=4)
-    # Neck guard.
-    for i in range(3):
-        rshell(h, [(-0.75 - 0.12 * i, 0.7 - 0.04 * i, 0.12, {"dy": 0.72 + 0.04 * i}),
-                   (-0.6 - 0.12 * i, 0.74 - 0.04 * i, 0.12, {"dy": 0.7 + 0.04 * i})], S["plate2"] if i % 2 else P)
+    if kind != "halo":  # neck guard (the sallet's tail covers the neck)
+        for i in range(3):
+            rshell(h, [(-0.75 - 0.12 * i, 0.7 - 0.04 * i, 0.12, {"dy": 0.72 + 0.04 * i}),
+                       (-0.6 - 0.12 * i, 0.74 - 0.04 * i, 0.12, {"dy": 0.7 + 0.04 * i})], P2 if i % 2 else P)
 
 
 def torso(o, S):
@@ -284,16 +330,19 @@ def cape(o, S):
     """A full cape: lofted from curved sections, hugging the shoulders and flaring wide
     behind the legs, with soft folds, a lining and a gold hem."""
     t = o("UpperTorso")
-    rings = [(0.94, 1.1, 0.15, 0.55, 80), (0.3, 1.35, 0.4, 0.45, 80), (-0.4, 2.15, 0.6, 0.38, 78),
-             (-2.0, 2.3, 0.72, 0.4, 74), (-3.72, 2.5, 0.88, 0.45, 70)]
-    n = 22
+    # (z, half width, centre y, half depth, half span in degrees from the back)
+    rings = S.get("cape_rings") or [(0.94, 1.1, 0.15, 0.55, 80), (0.3, 1.35, 0.4, 0.45, 80),
+                                    (-0.4, 2.15, 0.6, 0.38, 78), (-2.0, 2.3, 0.72, 0.4, 74),
+                                    (-3.72, 2.5, 0.88, 0.45, 70)]
+    folds = S.get("folds", 0.1)
+    n = 26
 
     def arc(rx, y0, ry, span, z, inset):
         pts = []
         for i in range(n):
             a = math.radians(-span + 2 * span * i / (n - 1))
-            fold = 0.0 if z > 0.5 else 0.1 * math.sin(a * 7) * min(1.0, (0.5 - z) / 2.5)
-            pts.append((rx * math.sin(a) * (1 - inset * 0.3), y0 + (ry + fold) * math.cos(a) - inset))
+            fold = 0.0 if z > 0.5 else folds * math.sin(a * 7) * min(1.0, (0.5 - z) / 2.5)
+            pts.append(((rx - inset) * math.sin(a), y0 + (ry - inset + fold) * math.cos(a)))
         return pts
 
     def sheet(color, inset, thick):
@@ -341,17 +390,22 @@ def arm(o, part, side, S):
     ua, la, hand = o(part + "UpperArm"), o(part + "LowerArm"), o(part + "Hand")
     # Pauldron: a big rounded dome over flaring lames, every edge piped in gold. The
     # dragoon's is slimmer, with a single lame - his blades make the silhouette.
-    k = 0.84 if S["pauldron"] == "dragon" else 1.0
+    k = S.get("pk", 0.84 if S["pauldron"] == "dragon" else 1.0)
     lames = 1 if S["pauldron"] == "dragon" else 3
-    rshell(ua, [(0.18, 0.86 * k, 0.8 * k, {"dx": side * 0.14}), (0.6, 0.8 * k, 0.74 * k, {"dx": side * 0.08}),
-                (0.92, 0.46 * k, 0.48 * k)], P, tip=(side * 0.02, 0, 1.02))
-    trim(ua, 0.2, 0.88 * k, 0.82 * k, T, dx=side * 0.14)
+    out = side * (k - 1) * 0.8  # big pauldrons sit further out, clear of the helm
+    rshell(ua, [(0.18, 0.86 * k, 0.8 * k, {"dx": side * 0.14 + out}), (0.6, 0.8 * k, 0.74 * k, {"dx": side * 0.08 + out}),
+                (0.92 * k, 0.46 * k, 0.48 * k, {"dx": out})], P, tip=(side * 0.02 + out, 0, 0.92 + 0.1 * k))
+    trim(ua, 0.2, 0.88 * k, 0.82 * k, T, dx=side * 0.14 + out)
     for i in range(lames):
-        z = 0.12 - 0.2 * i
-        rshell(ua, [(z - 0.2, (0.9 + 0.05 * i) * k, (0.82 + 0.03 * i) * k, {"dx": side * (0.2 + 0.05 * i)}),
-                    (z, (0.86 + 0.05 * i) * k, (0.8 + 0.03 * i) * k, {"dx": side * (0.16 + 0.05 * i)})],
+        z = 0.12 - 0.2 * i * k
+        rshell(ua, [(z - 0.2 * k, (0.9 + 0.05 * i) * k, (0.82 + 0.03 * i) * k, {"dx": side * (0.2 + 0.05 * i) + out}),
+                    (z, (0.86 + 0.05 * i) * k, (0.8 + 0.03 * i) * k, {"dx": side * (0.16 + 0.05 * i) + out})],
                P2 if i % 2 else P)
-        trim(ua, z - 0.2, (0.92 + 0.05 * i) * k, (0.84 + 0.03 * i) * k, T, h=0.05, dx=side * (0.2 + 0.05 * i))
+        trim(ua, z - 0.2 * k, (0.92 + 0.05 * i) * k, (0.84 + 0.03 * i) * k, T, h=0.05,
+             dx=side * (0.2 + 0.05 * i) + out)
+    if S["pauldron"] == "great":
+        for k2 in range(3):  # gold spikes along the pauldron's rim
+            ua.spike((side * 0.95 * k + out, -0.5 + 0.5 * k2, 0.3), (side, 0, 0.5), 0.4, 0.08, T, sides=4)
     if S["pauldron"] == "dragon":
         for k in range(3):
             sweep(ua, (side * (0.35 + 0.2 * k), -0.4 + 0.4 * k, 0.85 - 0.1 * k), (side * 0.6, 0.4, 1),

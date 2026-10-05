@@ -576,70 +576,79 @@ def spline(pts, steps=8):
     return out
 
 
-def glow_lines(p, strokes, color, core, width=9, halo=22):
-    """Smooth glowing lines (a soft halo, a coloured line and a bright core)."""
+def glow_lines(p, strokes, color, core, halo=20):
+    """Smooth glowing lines (a soft halo, a coloured line and a bright core).
+    strokes: (part, face, points, width)."""
     mask = Image.new("L", p.img.size, 0)
     md = ImageDraw.Draw(mask)
-    paths = [[p.at(part, face, u, v) for u, v in spline(pts)] for part, face, pts in strokes]
-    for path in paths:
-        md.line(path, fill=255, width=width + halo, joint="curve")
-    mask = mask.filter(ImageFilter.GaussianBlur(halo / 2)).point(lambda x: int(x * 0.7))
+    paths = [([p.at(part, face, u, v) for u, v in spline(pts)], width) for part, face, pts, width in strokes]
+    for path, width in paths:
+        md.line(path, fill=255, width=int(width + halo * width / 10), joint="curve")
+    mask = mask.filter(ImageFilter.GaussianBlur(halo / 2)).point(lambda x: int(x * 0.75))
     p.img = Image.composite(Image.new("RGB", p.img.size, color), p.img, mask)
     p.d = ImageDraw.Draw(p.img)
-    for path in paths:
-        p.d.line(path, fill=color, width=width, joint="curve")
-        p.d.line(path, fill=core, width=max(2, width // 3), joint="curve")
+    for path, width in paths:
+        p.d.line(path, fill=color, width=int(width), joint="curve")
+        p.d.line(path, fill=core, width=max(2, int(width / 3)), joint="curve")
 
 
-def mirror(pts):
-    return [(1 - u, v) for u, v in pts]
+def vein(rnd, strokes, part, face, start, end, width, depth):
+    """A wandering glowing vein from start to end that forks into thinner branches."""
+    (u0, v0), (u1, v1) = start, end
+    du, dv = u1 - u0, v1 - v0
+    length = math.hypot(du, dv) or 1e-6
+    nu, nv = -dv / length, du / length  # perpendicular
+    pts = [start]
+    for k in range(1, 4):
+        t = k / 4
+        off = rnd.uniform(-0.04, 0.04) * min(1.0, length * 2)
+        pts.append((u0 + du * t + nu * off, v0 + dv * t + nv * off))
+    pts.append(end)
+    strokes.append((part, face, pts, width))
+    if depth <= 0 or width < 3:
+        return
+    for _ in range(rnd.choice((1, 2, 2, 3))):
+        i = rnd.randint(1, 3)
+        bu, bv = pts[i]
+        ang = math.atan2(dv, du) + rnd.choice((1, -1)) * math.radians(rnd.uniform(25, 60))
+        ln = length * rnd.uniform(0.25, 0.45)
+        eu = min(1.0, max(0.0, bu + math.cos(ang) * ln))
+        ev = min(1.0, max(0.0, bv + math.sin(ang) * ln))
+        vein(rnd, strokes, part, face, (bu, bv), (eu, ev), width * 0.6, depth - 1)
 
 
-def energy_veins(p, color, core):
-    """Glowing lines that trace the muscles and joints (pecs, abs, obliques, delts,
-    biceps, forearms, quads, calves) instead of random cracks."""
+def energy_veins(p, color, core, seed=3):
+    """Glowing veins branching out from the chest eye to every part of the body, like
+    lightning under the skin (not a muscle grid)."""
+    rnd = random.Random(seed)
     S = []
 
-    def both(part, face, pts):
-        S.append((part, face, pts))
-        S.append((part, face, mirror(pts)))
+    def trunk(part, face, a, b, width=11, depth=2):
+        vein(rnd, S, part, face, a, b, width * 1.4, depth)
 
     T = "UpperTorso"
-    both(T, "front", [(0.04, 0.2), (0.1, 0.42), (0.28, 0.49), (0.45, 0.45), (0.5, 0.38)])  # under the pecs
-    both(T, "front", [(0.44, 0.2), (0.32, 0.08), (0.12, 0.02), (0.0, 0.05)])  # chest eye to the shoulders
-    both(T, "front", [(0.33, 0.52), (0.34, 0.75), (0.32, 0.98)])  # sides of the abs
-    both(T, "front", [(0.1, 0.5), (0.16, 0.75), (0.28, 1.0)])  # obliques
-    S.append((T, "front", [(0.5, 0.47), (0.5, 0.75), (0.5, 1.0)]))
-    for v in (0.665, 0.795):
-        S.append((T, "front", [(0.34, v), (0.5, v + 0.015), (0.66, v)]))
-    S.append((T, "back", [(0.5, 0.0), (0.5, 0.5), (0.5, 1.0)]))
-    both(T, "back", [(0.08, 0.12), (0.25, 0.42), (0.47, 0.32)])  # shoulder blades
-    both(T, "back", [(0.15, 0.55), (0.28, 0.78), (0.4, 1.0)])
+    eye = (0.5, 0.24)
+    for end in ((0.02, 0.02), (0.98, 0.02), (0.0, 0.48), (1.0, 0.48), (0.5, 1.0), (0.18, 1.0), (0.82, 1.0)):
+        trunk(T, "front", eye, end, 13)
+    trunk(T, "back", (0.5, 0.0), (0.5, 1.0), 12)
+    trunk(T, "back", (0.05, 0.05), (0.38, 0.95))
+    trunk(T, "back", (0.95, 0.05), (0.62, 0.95))
     for f in ("left", "right"):
-        S.append((T, f, [(0.5, 0.05), (0.42, 0.55), (0.6, 1.0)]))
+        trunk(T, f, (0.5, 0.0), (0.5, 1.0), 10, 1)
+    for u in (0.2, 0.5, 0.8):
+        trunk("LowerTorso", "front", (u, 0.0), (u + rnd.uniform(-0.08, 0.08), 1.0), 9, 0)
+        trunk("LowerTorso", "back", (u, 0.0), (u, 1.0), 8, 0)
     for side in ("Left", "Right"):
         for f in SIDES4:
-            S.append((side + "UpperArm", f, [(0.0, 0.4), (0.5, 0.5), (1.0, 0.4)]))  # under the delt
-        S.append((side + "UpperArm", "front", [(0.5, 0.5), (0.45, 0.75), (0.5, 1.0)]))  # biceps split
-        S.append((side + "UpperArm", "back", [(0.25, 0.5), (0.5, 0.82), (0.75, 0.5)]))  # triceps horseshoe
-        for f in ("left", "right"):
-            S.append((side + "UpperArm", f, [(0.5, 0.5), (0.55, 1.0)]))
-        S.append((side + "LowerArm", "front", [(0.5, 0.0), (0.33, 0.45), (0.5, 1.0)]))
-        S.append((side + "LowerArm", "back", [(0.5, 0.0), (0.66, 0.5), (0.5, 1.0)]))
-        for f in ("left", "right"):
-            S.append((side + "LowerArm", f, [(0.4, 0.0), (0.6, 1.0)]))
-        S.append((side + "Hand", "front", [(0.5, 0.0), (0.5, 0.6)]))
-        S.append((side + "UpperLeg", "front", [(0.15, 0.0), (0.33, 0.55), (0.55, 0.96)]))  # quads teardrop
-        S.append((side + "UpperLeg", "front", [(0.85, 0.0), (0.76, 0.6), (0.58, 0.96)]))
-        S.append((side + "UpperLeg", "back", [(0.5, 0.0), (0.5, 1.0)]))
-        for f in ("left", "right"):
-            S.append((side + "UpperLeg", f, [(0.5, 0.0), (0.45, 1.0)]))
-        S.append((side + "LowerLeg", "front", [(0.5, 0.0), (0.44, 1.0)]))
-        S.append((side + "LowerLeg", "back", [(0.15, 0.0), (0.35, 0.5), (0.5, 0.78), (0.65, 0.5), (0.85, 0.0)]))
-        for f in ("left", "right"):
-            S.append((side + "LowerLeg", f, [(0.5, 0.0), (0.5, 1.0)]))
-    both("Head", "front", [(0.2, 0.56), (0.24, 0.8), (0.34, 1.0)])
-    S.append(("Head", "back", [(0.5, 0.0), (0.5, 1.0)]))
+            trunk(side + "UpperArm", f, (0.5, 0.0), (rnd.uniform(0.35, 0.65), 1.0), 10 if f == "front" else 8)
+            trunk(side + "LowerArm", f, (rnd.uniform(0.35, 0.65), 0.0), (0.5, 1.0), 9 if f == "front" else 7)
+            trunk(side + "UpperLeg", f, (rnd.uniform(0.3, 0.7), 0.0), (0.5, 1.0), 10 if f == "front" else 8)
+            trunk(side + "LowerLeg", f, (0.5, 0.0), (rnd.uniform(0.35, 0.65), 1.0), 9 if f == "front" else 7, 1)
+        trunk(side + "UpperLeg", "front", (0.75, 0.0), (0.6, 1.0), 8, 1)
+        trunk(side + "Hand", "front", (0.5, 0.0), (0.5, 0.7), 6, 1)
+    trunk("Head", "back", (0.5, 1.0), (0.5, 0.1), 8, 1)
+    for u in (0.3, 0.7):
+        trunk("Head", "front", (u, 1.0), (0.5 + (u - 0.5) * 1.6, 0.65), 6, 1)
     glow_lines(p, S, color, core)
 
 
