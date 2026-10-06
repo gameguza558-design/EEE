@@ -791,6 +791,7 @@ def white_knight():
     blocky R15 body like artwork (artpaint.py); geometry is only the red cape over the left
     shoulder, the holy greatsword and the shield."""
     ch = Character("KnightWhite", glow=GOLD_GLOW, weapon="RadiantGreatsword", shield=True)
+    ch.armor = "white_box"
     ch.painter = artpaint.PAINTERS["white"]()
     ch.outfit = refknights.white_cape(ch.name, GOLD_GLOW)
     refknights.white_shield(ch.outfit)

@@ -28,7 +28,7 @@ def mix(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def plate(p, part, face, pts, base, dark=0.55, light=1.32, chrome=True, spec=True, ink=INK, ink_w=3, depth=0.1,
+def plate(p, part, face, pts, base, dark=0.42, light=1.5, chrome=True, spec=True, ink=INK, ink_w=3, depth=0.1,
           trim=None, trim_w=0):
     """Paint one armour plate (polygon pts) with metal shading and an ink outline."""
     q = [p.at(part, face, u, v) for u, v in pts]
@@ -154,8 +154,8 @@ def white_knight():
         kw.setdefault("trim", (222, 182, 92))
         kw.setdefault("trim_w", 4)
         return plate(*args, **kw)
-    S = (176, 183, 198)       # silver
-    S2 = (150, 158, 176)      # darker silver for under-plates
+    S = (160, 168, 186)       # silver
+    S2 = (124, 132, 152)      # darker silver for under-plates
     gold, blue = (222, 182, 92), (40, 100, 230)
     glow, core = (255, 205, 105), (255, 250, 230)
     for part in style2.PARTS:  # under-layer: dark mail / arming cloth

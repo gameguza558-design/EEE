@@ -199,3 +199,70 @@ def white(part):
 
 
 BUILDERS = {"white": white}
+
+
+def face_profile(bm, shape, depth, z_peak, z_lo, z_hi, width=0.32):
+    """Shape the front of a helm as seen from the side: '>' (two straight slopes meeting at
+    z_peak) or ')' (one convex arc). The whole front plane moves, so the chin stays forward."""
+    def prof(z):
+        if z < z_lo or z > z_hi:
+            return 0.0
+        if shape == ">":
+            t = 1 - abs(z - z_peak) / ((z_peak - z_lo) if z < z_peak else (z_hi - z_peak))
+        else:
+            t = math.sin(math.pi * (z - z_lo) / (z_hi - z_lo))
+        return depth * max(0.0, t)
+
+    def fn(co, n):
+        if co.y > 0:
+            return Vector()
+        wy = min(1.0, (-co.y / 0.45)) ** 1.5
+        return Vector((0, -prof(co.z) * gauss(co.x * co.x, width) * wy, 0))
+    deform(bm, fn)
+
+
+def block(part, dims, bevel=0.1, cuts=6, center=(0, 0, 0)):
+    """A crisp armour block: a box with small rounded edges (not a balloon)."""
+    bm = style2.rounded_box(Vector(dims), bevel, center)
+    bmesh.ops.subdivide_edges(bm, edges=list(bm.edges), cuts=cuts, use_grid_fill=True)
+    bm.normal_update()
+    return bm
+
+
+def white_box(part):
+    """White Knight after the Paladin Knight R15 sheet: every part a chunky, crisp
+    armour block, bulkier than the body; detail is painted (artpaint.white_knight)."""
+    k = kind_of(part)
+    if part == "Head":
+        bm = block(part, (1.3, 1.36, 1.4), bevel=0.14, cuts=8, center=(0, 0, 0.06))
+        taper_top(bm, 0.35, 0.76, 0.12)
+        face_profile(bm, ">", 0.2, -0.1, -0.64, 0.45, width=0.34)
+        return bm
+    if part == "UpperTorso":
+        bm = block(part, (2.26, 1.32, 1.72), bevel=0.12, cuts=8)
+        keel(bm, 0.07, 0.25, 0.1, 0.8)
+        return bm
+    if part == "LowerTorso":
+        return block(part, (2.32, 1.38, 0.5), bevel=0.08, cuts=4)
+    if k == "UpperArm":
+        return block(part, (1.16, 1.16, 1.2), bevel=0.1, cuts=5)
+    if k == "LowerArm":
+        bm = block(part, (1.18, 1.18, 1.08), bevel=0.1, cuts=6)
+        flare(bm, -0.12, -0.54, 0.2)  # big flared gauntlet cuff
+        return bm
+    if k == "Hand":
+        return block(part, (1.22, 1.22, 0.44), bevel=0.1, cuts=3)
+    if k == "UpperLeg":
+        return block(part, (1.18, 1.22, 1.24), bevel=0.1, cuts=5)
+    if k == "LowerLeg":
+        bm = block(part, (1.22, 1.26, 1.22), bevel=0.1, cuts=6)
+        bulge(bm, (0, -0.63, 0.42), 0.26, 0.12)  # knee cop
+        return bm
+    if k == "Foot":
+        bm = block(part, (1.2, 1.4, 0.36), bevel=0.08, cuts=4, center=(0, -0.08, 0.02))
+        keel(bm, 0.18, 0.22, 0.0, 0.3)
+        return bm
+    raise KeyError(part)
+
+
+BUILDERS["white_box"] = white_box

@@ -266,21 +266,23 @@ def white_cape(name, glow):
                       (z + h / 2, top, top * 0.95, {"dx": cx})], "plate_white", p=5.0)
             trim(ua, z - h / 2 + 0.03, w / 2 + 0.025, w / 2 * 0.96 + 0.025, "gold", h=0.07, dx=cx, p=5.0)
     h = o("Head")
-    for k in range(7):  # crown of crest spikes
-        a = math.radians(-90 + 180 * k / 6)
-        x, y = 0.3 * math.sin(a), 0.12 - 0.3 * math.cos(a) * 0.4
-        h.spike((x, y, 0.5), (x * 0.5, 0.15, 1), 0.38 + (0.18 if k == 3 else 0.08 * (k % 2)), 0.08, "plate_white",
-                sides=4)
+    for k in range(9):  # a crown of spikes round the top edge of the helm
+        a = math.radians(-120 + 240 * k / 8)
+        x, y = 0.5 * math.sin(a), -0.5 * math.cos(a)
+        h.spike((x * 0.92, y * 0.92, 0.7), (x * 0.25, y * 0.25, 1), 0.34 + (0.16 if k == 4 else 0.06 * (k % 2)), 0.08,
+                "plate_white", sides=4)
+    for s in (1, -1):  # curved horns rising from the sides
+        sweep(h, (s * 0.6, 0.0, 0.35), (s * 0.5, 0.1, 1), 0.85, 0.2, 40, "plate_white", edge="gold", flip=s < 0)
     lt = o("LowerTorso")
     for x in (-0.28, 0.28):  # red tabard strips with gold diamond tips
-        lt.cloth([x - 0.12, x, x + 0.12], 0.1, [-1.5, -1.62, -1.5], -0.53, "cloth_royal", thick=0.04)
-        lt.spike((x, -0.55, -1.55), (0, 0, -1), 0.2, 0.09, "gold", sides=4)
-        lt.box((0.26, 0.05, 0.06), "gold", pos=(x, -0.56, 0.08))
+        lt.cloth([x - 0.13, x, x + 0.13], 0.12, [-1.5, -1.62, -1.5], -0.72, "cloth_royal", thick=0.04)
+        lt.spike((x, -0.74, -1.55), (0, 0, -1), 0.22, 0.1, "gold", sides=4)
+        lt.box((0.3, 0.06, 0.08), "gold", pos=(x, -0.74, 0.1))
     t = o("UpperTorso")
-    blob(t, (0.82, -0.5, 0.72), (0.17, 0.08, 0.17), "gold", sides=10, rings=4)  # brooch
-    lens(t, (0.82, -0.57, 0.72), (0, -1, 0), 0.08, 0.08, 0.06, "gem_blue", n=8)
+    blob(t, (0.85, -0.66, 0.72), (0.18, 0.08, 0.18), "gold", sides=10, rings=4)  # brooch
+    lens(t, (0.85, -0.73, 0.72), (0, -1, 0), 0.09, 0.09, 0.06, "gem_blue", n=8)
     lofted_cape(o, dict(cape="cloth_royal", lining="cloth_royal", trim="gold", trim2="gold", gem="gem_blue", clasps=False,
-                        cape_rings=[(0.92, 1.1, 0.12, 0.62, (5, 125)), (0.4, 1.8, 0.4, 0.6, (15, 100)),
+                        cape_rings=[(0.92, 1.2, 0.1, 0.74, (5, 125)), (0.4, 1.85, 0.42, 0.66, (15, 100)),
                                     (-0.6, 2.0, 0.62, 0.42, (20, 86)), (-2.0, 2.1, 0.74, 0.44, (24, 82)),
                                     (-2.75, 2.15, 0.8, 0.46, (26, 80))]))
     return o
