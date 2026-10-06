@@ -24,7 +24,7 @@ TILES = [
     "pants", "shield", "fur_dark", "rope", "plate_corrupt_heavy", "bone",
     # Luxury knights and the Prince.
     "plate_white", "plate_black", "plate_navy", "cloth_royal", "cloth_white", "blade_dark",
-    "gem", "gold_engraved", "gem_blue",
+    "gem", "gold_engraved", "gem_blue", "cloth_blue",
 ]
 
 PURPLE = np.array([0.72, 0.30, 1.0])
@@ -425,6 +425,7 @@ def build_atlas(path, seed=3):
         "gem": gem(rng),
         "gold_engraved": engraved_gold(rng),
         "gem_blue": gem(rng, (0.1, 0.35, 0.95)),
+        "cloth_blue": royal_cloth(rng, (0.1, 0.17, 0.3)),
     }
     assert set(tiles) == set(TILES), set(TILES) ^ set(tiles)
     atlas = np.zeros((ATLAS, ATLAS, 3), np.float32)

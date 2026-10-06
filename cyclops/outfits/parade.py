@@ -80,7 +80,7 @@ def pipe(piece, pts, color, w=0.05, t=0.035):
         piece.box((w, t, d.length + w * 0.6), color, pos=tuple((a + b) / 2), rot=_rot_to(d))
 
 
-def curved_plate(piece, center, radius, a0, a1, z0, z1, color, thick=0.05, flare=0.0, n=8):
+def curved_plate(piece, center, radius, a0, a1, z0, z1, color, thick=0.05, flare=0.0, n=8, rot=(0, 0, 0)):
     """A plate curved round a vertical axis (tassets, greave fronts). Angles in degrees,
     0 = front (-Y), 90 = +X."""
     cx, cy = center
@@ -90,7 +90,7 @@ def curved_plate(piece, center, radius, a0, a1, z0, z1, color, thick=0.05, flare
                  cy - r * math.cos(math.radians(a0 + (a1 - a0) * i / (n - 1)))) for i in range(n)]
     top = arc(radius) + list(reversed(arc(radius - thick)))
     bot = arc(radius + flare) + list(reversed(arc(radius + flare - thick)))
-    piece.loft([(z0, bot), (z1, top)], color, smooth=True)
+    piece.loft([(z0, bot), (z1, top)], color, smooth=True, rot=rot)
 
 
 # ---------------------------------------------------------------------------

@@ -67,7 +67,7 @@ R15_POS = {
 # Materials painted as one plate per face (bevel, rivets, stitching) map each face onto
 # the whole tile. Organic/fabric materials keep a constant texel density instead, so
 # small faces show a small patch of the tile rather than a squashed copy of it.
-DENSITY_TILES = {"plate_white", "plate_black", "cloth_royal", "cloth_white",
+DENSITY_TILES = {"plate_white", "plate_black", "cloth_royal", "cloth_white", "cloth_blue",
                  "skin", "skin_corrupt", "skin_king", "hair", "fur", "fur_dark", "cloth",
                  "cloth_dark", "cloth_brown", "cloth_green", "linen", "pants", "quilt",
                  "chainmail", "wood", "rope", "horn", "body"}

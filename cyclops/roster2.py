@@ -36,7 +36,7 @@ from outfits import common  # noqa: E402
 from style2 import FACES, Painter, cyclops_face  # noqa: E402
 
 common.PAINTED = True
-from outfits import elite, knights, parade  # noqa: E402
+from outfits import elite, knights, parade, refknights  # noqa: E402
 from outfits.common import Outfit  # noqa: E402
 
 OUT = os.path.join(HERE, "export", "r15")
@@ -784,54 +784,54 @@ def plume(seed, count=9, pad=0.3, length=1.0):
 
 
 def white_knight():
-    """The White Knight: polished white plate piped in gold, a winged helm, a blue-gem
-    sunburst on the chest, a crimson cape, a long holy greatsword and a great shield."""
+    """White Knight (after the silver knight reference)."""
     ch = Character("KnightWhite", glow=GOLD_GLOW, weapon="RadiantGreatsword", shield=True)
     ch.painter = armored_painter(61, (128, 136, 130), (225, 220, 210), iris=(255, 200, 90))
-    ch.outfit = parade.parade_knight(ch.name, "white", glow=GOLD_GLOW, seed=61)
-    parade.parade_shield(ch.outfit)
+    ch.outfit = refknights.white(ch.name, GOLD_GLOW)
+    refknights.white_shield(ch.outfit)
     ch.head_scale = HELMED_HEAD
     return ch
 
 
 def black_knight():
-    """The Black Knight (after Momon): sleek black muscle-cuirass plate traced with gold,
-    gold knee cops, a bladed helm and pauldrons, a full crimson cape and two enormous
-    greatswords, one in each hand."""
+    """Black Knight (after the black knight in the forest, with his red cape and twin
+    axe-tipped greatswords)."""
     ch = Character("KnightBlack", glow=CRIMSON, weapon="AbyssGreatsword")
     ch.painter = armored_painter(62, (120, 126, 124), (34, 30, 36), iris=(255, 60, 70))
-    ch.outfit = parade.parade_knight(ch.name, "black", glow=CRIMSON, seed=62)
+    ch.outfit = refknights.black(ch.name, CRIMSON)
+    ch.hairs.append(("Head", "Plume", refknights.plume(62, count=9, root=(0, 0.3, 1), aim=(0, 1, 0.6), length=2.3,
+                                                       width=0.17, gravity=0.35, pad=0.42, spread=0.35),
+                     ((236, 236, 240), (180, 180, 190), (255, 255, 255))))
     ch.head_scale = HELMED_HEAD
     return ch
 
 
 def royal_guard():
-    """Royal Guard: polished steel and gold, a gold cross on the chest, a crimson tabard,
-    cape and plume, and a towering halberd."""
+    """Royal Guard (after Artorias): one huge pauldron, ribbed arms, a tattered blue
+    scarf and a long plume."""
     ch = Character("KnightRoyalGuard", weapon="RoyalHalberd")
-    ch.painter = armored_painter(63, (132, 140, 134), (120, 26, 40))
-    ch.outfit = parade.parade_knight(ch.name, "guard", seed=63)
+    ch.painter = armored_painter(63, (132, 140, 134), (40, 44, 56))
+    ch.outfit = refknights.artorias(ch.name, PURPLE)
+    ch.hairs.append(("Head", "Plume", refknights.artorias_plume(), ((40, 52, 86), (16, 20, 36), (90, 110, 150))))
     ch.head_scale = HELMED_HEAD
     return ch
 
 
 def paladin():
-    """Paladin of the Eye: white-and-gold plate with corrupted lames, a horn and a halo of
-    crystal rays, a glowing eye on the chest and a colossal eye maul."""
+    """Paladin of the Eye (after the hooded knight): a hood over pure darkness, dark plate
+    engraved in gold, and the colossal eye maul."""
     ch = Character("KnightPaladin", weapon="EyeWarhammer")
-    ch.painter = armored_painter(65, (126, 132, 130), (230, 226, 220))
-    ch.outfit = parade.parade_knight(ch.name, "paladin", seed=65)
+    ch.painter = armored_painter(65, (126, 132, 130), (50, 50, 60))
+    ch.outfit = refknights.hooded(ch.name, PURPLE)
     ch.head_scale = HELMED_HEAD
     return ch
 
 
 def dragon_knight():
-    """Miniboss: the Cyclops Dragon Knight. Black dragoon plate traced in silver, curved
-    blades sweeping back from the helm, shoulders, elbows, knees and back like a dragon's
-    wings, a crimson-violet aura and a long winged lance."""
+    """Miniboss: the Cyclops Dragon Knight (after the dragoon reference)."""
     ch = Character("CyclopsDragonKnight", glow=DRAGON_GLOW, weapon="DragonLance")
     ch.painter = armored_painter(91, (110, 100, 118), (30, 26, 36), iris=(255, 60, 120))
-    ch.outfit = parade.parade_knight(ch.name, "dragoon", glow=DRAGON_GLOW, seed=91)
+    ch.outfit = refknights.dragoon(ch.name, DRAGON_GLOW)
     ch.head_scale = HELMED_HEAD
     return ch
 
