@@ -16,9 +16,9 @@
 
 	Outfits:  Villager, Hunter, Woodcutter, WolfRider, WolfHandler, KnightApprentice, EliteOneHorn,
 	          KnightApprenticeInfected, KnightMid, KnightHigh, WolfKnight, Spearman, SpearmanShield,
-	          KnightWhite, KnightBlack, KnightRoyalGuard, KnightPaladin, General,
+	          General,
 	          VillagerBlighted, WoodcutterBlighted, KnightBlighted, KnightBlightedAxe (infected elites),
-	          CyclopsDragonKnight (miniboss), CyclopsPrince (sub-boss), CyclopsKing, CyclopsKing3D
+	          CyclopsPrince (sub-boss), CyclopsKing, CyclopsKing3D
 	Weapons:  Pitchfork, Hoe, Spade, Sickle, Scythe, HunterBow, WoodcutterAxe, WolfRiderSpear,
 	          OneHornGreatsword, ApprenticeAxe, ApprenticeSword, MidAxe, MidSword, HighAxe, HighSword,
 	          Spear, DragonSlayer, RadiantGreatsword, AbyssGreatsword (dual: one in each hand),

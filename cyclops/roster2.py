@@ -25,8 +25,6 @@ from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 import bmesh  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
-import armorpaint  # noqa: E402
-import artpaint  # noqa: E402
 import build_all  # noqa: E402
 import hair  # noqa: E402
 import kit  # noqa: E402
@@ -38,7 +36,7 @@ from outfits import common  # noqa: E402
 from style2 import FACES, Painter, cyclops_face  # noqa: E402
 
 common.PAINTED = True
-from outfits import elite, knights, parade, refknights  # noqa: E402
+from outfits import elite, knights, parade  # noqa: E402
 from outfits.common import Outfit  # noqa: E402
 
 OUT = os.path.join(HERE, "export", "r15")
@@ -241,7 +239,6 @@ class Character:
         # Fully helmed knights: the hidden head is shrunk so the helm can be slim (a small
         # head on broad armour reads as big and dangerous).
         self.head_scale = None
-        self.armor = None  # sculpted-armour style (sculpt.py + armorpaint.py): replaces the body
 
 
 def villager():
@@ -756,9 +753,6 @@ def prince_bumps():
 
 # ---------------------------------------------------------------------------
 # The court: luxury knights in parade armour (One-Horn design language, regal finish).
-GOLD_GLOW = (255, 200, 90)
-HELMED_HEAD = (0.8, 0.82, 0.95)
-CRIMSON = (255, 40, 60)
 CYAN = (60, 230, 255)
 
 
@@ -784,64 +778,6 @@ def plume(seed, count=9, pad=0.3, length=1.0):
         pl.clump(Vector((0, 0.2 + 0.1 * k, 1)), length + 0.1 * k, 0.2, gravity=0.7, lift=0.6, segments=7,
                  thickness=0.5, taper=1.2)
     return pl.finish()
-
-
-def white_knight():
-    """White Knight (after the silver knight reference): the armour is painted onto the
-    blocky R15 body like artwork (artpaint.py); geometry is only the red cape over the left
-    shoulder, the holy greatsword and the shield."""
-    ch = Character("KnightWhite", glow=GOLD_GLOW, weapon="RadiantGreatsword", shield=True)
-    ch.armor = "white_box"
-    ch.painter = artpaint.PAINTERS["white"]()
-    ch.outfit = refknights.white_cape(ch.name, GOLD_GLOW)
-    refknights.white_shield(ch.outfit)
-    return ch
-
-
-def black_knight():
-    """Black Knight (after the black knight in the forest, with his red cape and twin
-    axe-tipped greatswords)."""
-    ch = Character("KnightBlack", glow=CRIMSON, weapon="AbyssGreatsword")
-    ch.painter = armored_painter(62, (120, 126, 124), (34, 30, 36), iris=(255, 60, 70))
-    ch.outfit = refknights.black(ch.name, CRIMSON)
-    ch.hairs.append(("Head", "Plume", refknights.plume(62, count=9, root=(0, 0.3, 1), aim=(0, 1, 0.6), length=2.3,
-                                                       width=0.17, gravity=0.35, pad=0.42, spread=0.35),
-                     ((236, 236, 240), (180, 180, 190), (255, 255, 255))))
-    ch.head_scale = HELMED_HEAD
-    return ch
-
-
-def royal_guard():
-    """Royal Guard (after Artorias): one huge pauldron, ribbed arms, a tattered blue
-    scarf and a long plume."""
-    ch = Character("KnightRoyalGuard", weapon="RoyalHalberd")
-    ch.painter = armored_painter(63, (132, 140, 134), (40, 44, 56))
-    ch.outfit = refknights.artorias(ch.name, PURPLE)
-    ch.hairs.append(("Head", "Plume", refknights.artorias_plume(), ((40, 52, 86), (16, 20, 36), (90, 110, 150))))
-    ch.head_scale = HELMED_HEAD
-    return ch
-
-
-def paladin():
-    """Paladin of the Eye (after the hooded knight): a hood over pure darkness, dark plate
-    engraved in gold, and the colossal eye maul."""
-    ch = Character("KnightPaladin", weapon="EyeWarhammer")
-    ch.painter = armored_painter(65, (126, 132, 130), (50, 50, 60))
-    ch.outfit = refknights.hooded(ch.name, PURPLE)
-    ch.head_scale = HELMED_HEAD
-    return ch
-
-
-def dragon_knight():
-    """Miniboss: the Cyclops Dragon Knight (after the dragoon reference)."""
-    ch = Character("CyclopsDragonKnight", glow=DRAGON_GLOW, weapon="DragonLance")
-    ch.painter = armored_painter(91, (110, 100, 118), (30, 26, 36), iris=(255, 60, 120))
-    ch.outfit = refknights.dragoon(ch.name, DRAGON_GLOW)
-    ch.head_scale = HELMED_HEAD
-    return ch
-
-
-DRAGON_GLOW = (255, 50, 110)
 
 
 # ---------------------------------------------------------------------------
@@ -1068,10 +1004,9 @@ ROSTER = {
     "stage2": [lambda: knight("apprentice_infected", 0.55, "KnightApprenticeInfected", "ApprenticeAxe", 24),
                lambda: knight("mid", 0.65, "KnightMid", "MidSword", 22),
                lambda: knight("high", 0.9, "KnightHigh", "HighAxe", 23)],
-    "court": [white_knight, black_knight, royal_guard, paladin, general],
+    "court": [general],
     "army": [spearman, lambda: spearman(True), wolf_handler, wolf_knight],
     "elite": [villager_blighted, woodcutter_blighted, knight_blighted, lambda: knight_blighted(True)],
-    "miniboss": [dragon_knight],
     "boss": [cyclops_prince, cyclops_king, lambda: cyclops_king(sculpted=True)],
 }
 
@@ -1280,70 +1215,11 @@ def glow_material(color):
     return mat
 
 
-def build_armored(ch, parts, template, atlas_mats):
-    """Sculpted armour: each R15 part becomes one sculpted mesh UV'd straight onto the
-    painted template; the outfit only adds cloth (cape, panels), shields and crystals."""
-    import sculpt
-    mat = bpy.data.materials.new(ch.name + "Armor")
-    mat.use_nodes = True
-    t = mat.node_tree.nodes.new("ShaderNodeTexImage")
-    t.image = bpy.data.images.load(template)
-    bsdf = mat.node_tree.nodes["Principled BSDF"]
-    mat.node_tree.links.new(t.outputs["Color"], bsdf.inputs["Base Color"])
-    bsdf.inputs["Metallic"].default_value = 0.35
-    bsdf.inputs["Roughness"].default_value = 0.42
-    objs = []
-    for part, o in parts.items():
-        old = o.data
-        o.data = sculpt.to_mesh(sculpt.BUILDERS[ch.armor](part), part, f"{part}_Body")
-        bpy.data.meshes.remove(old)
-        o.data.materials.append(mat)
-        o.name = f"{part}_Body"
-        objs.append(o)
-    centres = {part: o.location.copy() for part, o in parts.items()}
-    objs += build_extras(ch, centres, atlas_mats)
-    outlines = [make_outline(o, OUTLINE_THICKNESS.get(o.name.split("_", 1)[1], 0.025)) for o in objs
-                if not o.name.split("_", 1)[1].endswith("Glow")]
-    return objs + outlines
-
-
-def build_extras(ch, centres, atlas_mats):
-    """Hair/plumes and outfit pieces placed at the part centres."""
-    objs = []
-    for part, kind, bm, (base, tip, hi) in ch.hairs:
-        tex = hair.hair_texture(os.path.join(OUT, f"{ch.name}_{kind}.png"), base, tip, hi)
-        mat = bpy.data.materials.new(f"{ch.name}{kind}")
-        mat.use_nodes = True
-        t = mat.node_tree.nodes.new("ShaderNodeTexImage")
-        t.image = bpy.data.images.load(tex)
-        mat.node_tree.links.new(t.outputs["Color"], mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"])
-        me = bpy.data.meshes.new(f"{part}_{kind}")
-        bm.to_mesh(me)
-        bm.free()
-        for poly in me.polygons:
-            poly.use_smooth = True
-        me.materials.append(mat)
-        o = bpy.data.objects.new(f"{part}_{kind}", me)
-        o.location = centres[part]
-        bpy.context.collection.objects.link(o)
-        objs.append(o)
-    for part, kinds in ch.outfit.pieces.items():
-        for kind, piece in kinds.items():
-            if not len(piece.bm.faces) or (kind.startswith("Shield") and not ch.shield):
-                piece.bm.free()
-                continue
-            mat = glow_material(ch.outfit.glow) if kind.endswith("Glow") else atlas_mats[0]
-            objs.append(piece.to_object(f"{part}_{kind}", mat, centres[part]))
-    return objs
-
-
 def build_character(ch, atlas_mats):
     """Bake the body, build hair and geometry pieces. Returns all objects (origins at
     the real R15 part centres) for export."""
     template = ch.painter.save(os.path.join(OUT, f"{ch.name}_template.png"))
     parts = r15_real.load_reference()
-    if ch.armor:
-        return build_armored(ch, parts, template, atlas_mats)
     for part, o in parts.items():
         r15_real.add_paint_uv(o, part)
     img = r15_real.bake(parts, template, os.path.join(OUT, f"{ch.name}_texture.png"))
@@ -1489,7 +1365,7 @@ def preview_user_hair(head):
     return hair_obj
 
 
-SPACING = {"court": 6.4, "elite": 6.0, "boss": 6.0, "miniboss": 7.0}
+SPACING = {"court": 6.4, "elite": 6.0, "boss": 6.0}
 
 
 def pose_weapons(ch, objs, mats, k):
@@ -1535,7 +1411,7 @@ def render_lineups(built, weapon_objs, mats):
         top = max(6.8 * max(scales.get(c.name, 1.0) for c, _ in members),
                   max((o.matrix_world @ Vector(c)).z for o in shown for c in o.bound_box) + 0.4)
         center = (x / 2, 0, top / 2 - 0.2)
-        if group in ("boss", "miniboss"):
+        if group == "boss":
             # One close-up per King; the buyer's own hair is shown here as a preview only.
             for ch, objs in members:
                 head = next(o for o in objs if o.name.endswith("Head_Body"))
