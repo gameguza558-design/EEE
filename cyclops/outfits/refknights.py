@@ -251,12 +251,38 @@ def white_extras(name, glow):
 
 
 def white_cape(name, glow):
-    """The White Knight's only cloth geometry: the red cape over his left shoulder."""
+    """White Knight (after the Paladin Knight R15 concept sheet) - the few pieces that are
+    geometry, all sitting flush on the body: blocky three-tier pauldrons edged in gold, a
+    crown of crest spikes on the helm, two red tabard strips with gold tips, the red cape
+    draped from a gold brooch on the left shoulder down the left of the back."""
     o = Outfit(name, glow=glow, seed=61)
-    lofted_cape(o, dict(cape="cloth_royal", lining="cloth_white", trim="gold", trim2="blade", gem="gem_blue",
-                        cape_rings=[(0.92, 1.12, 0.1, 0.62, (35, 120)), (0.5, 1.9, 0.3, 0.75, (60, 105)),
-                                    (-0.4, 2.2, 0.6, 0.42, (74, 84)), (-2.0, 2.35, 0.72, 0.42, 74),
-                                    (-3.72, 2.55, 0.88, 0.48, 70)]))
+    for part, side in (("LeftUpperArm", 1), ("RightUpperArm", -1)):
+        ua = o(part)
+        # Three rounded blocks hugging the arm, each a little bigger, stepping down it.
+        for i, (w, h, z) in enumerate(((1.2, 0.46, 0.52), (1.27, 0.34, 0.16), (1.34, 0.32, -0.15))):
+            cx = side * (0.03 + 0.03 * i)
+            top = w / 2 * (0.72 if i == 0 else 0.9)  # the top block domes over the shoulder
+            boxy(ua, [(z - h / 2, w / 2, w / 2 * 0.96, {"dx": cx}), (z + h / 2 - 0.1, w / 2 * 0.98, w / 2 * 0.94, {"dx": cx}),
+                      (z + h / 2, top, top * 0.95, {"dx": cx})], "plate_white", p=5.0)
+            trim(ua, z - h / 2 + 0.03, w / 2 + 0.025, w / 2 * 0.96 + 0.025, "gold", h=0.07, dx=cx, p=5.0)
+    h = o("Head")
+    for k in range(7):  # crown of crest spikes
+        a = math.radians(-90 + 180 * k / 6)
+        x, y = 0.3 * math.sin(a), 0.12 - 0.3 * math.cos(a) * 0.4
+        h.spike((x, y, 0.5), (x * 0.5, 0.15, 1), 0.38 + (0.18 if k == 3 else 0.08 * (k % 2)), 0.08, "plate_white",
+                sides=4)
+    lt = o("LowerTorso")
+    for x in (-0.28, 0.28):  # red tabard strips with gold diamond tips
+        lt.cloth([x - 0.12, x, x + 0.12], 0.1, [-1.5, -1.62, -1.5], -0.53, "cloth_royal", thick=0.04)
+        lt.spike((x, -0.55, -1.55), (0, 0, -1), 0.2, 0.09, "gold", sides=4)
+        lt.box((0.26, 0.05, 0.06), "gold", pos=(x, -0.56, 0.08))
+    t = o("UpperTorso")
+    blob(t, (0.82, -0.5, 0.72), (0.17, 0.08, 0.17), "gold", sides=10, rings=4)  # brooch
+    lens(t, (0.82, -0.57, 0.72), (0, -1, 0), 0.08, 0.08, 0.06, "gem_blue", n=8)
+    lofted_cape(o, dict(cape="cloth_royal", lining="cloth_royal", trim="gold", trim2="gold", gem="gem_blue", clasps=False,
+                        cape_rings=[(0.92, 1.1, 0.12, 0.62, (5, 125)), (0.4, 1.8, 0.4, 0.6, (15, 100)),
+                                    (-0.6, 2.0, 0.62, 0.42, (20, 86)), (-2.0, 2.1, 0.74, 0.44, (24, 82)),
+                                    (-2.75, 2.15, 0.8, 0.46, (26, 80))]))
     return o
 
 

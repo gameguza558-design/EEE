@@ -419,7 +419,7 @@ def cape(o, S):
         for k, (z, w) in enumerate(((1.05, 0.86), (1.2, 0.8), (1.32, 0.7))):
             rshell(t, [(z - 0.1, w, w * 0.88, {"dy": 0.05}), (z + 0.08, w * 0.96, w * 0.84, {"dy": 0.05})],
                    S["cape"], p=2.0)
-    for s in (1, -1):  # shoulder clasps
+    for s in ((1, -1) if S.get("clasps", True) else ()):  # shoulder clasps
         blob(t, (s * 0.82, 0.3, 0.88), (0.19, 0.16, 0.19), S["trim2"], sides=10, rings=5)
         lens(t, (s * 0.82, 0.12, 0.9), (0, -1, 0.4), 0.09, 0.09, 0.09, S["gem"], n=8)
 

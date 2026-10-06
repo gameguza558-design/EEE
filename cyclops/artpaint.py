@@ -149,6 +149,11 @@ def white_knight():
     """Silver knight, painted: chrome-shaded silver plates, a winged helm with a V visor
     glowing gold, the blue gem on the left breast, white cloth panels down the legs."""
     p = Painter(seed=61)
+
+    def gp(*args, **kw):  # silver plate edged in gold, as on the concept sheet
+        kw.setdefault("trim", (222, 182, 92))
+        kw.setdefault("trim_w", 4)
+        return plate(*args, **kw)
     S = (176, 183, 198)       # silver
     S2 = (150, 158, 176)      # darker silver for under-plates
     gold, blue = (222, 182, 92), (40, 100, 230)
@@ -159,12 +164,12 @@ def white_knight():
 
     # --- Helm ---------------------------------------------------------------
     H = "Head"
-    plate(p, H, "front", [(0.0, 0.0), (1.0, 0.0), (1.0, 0.72), (0.5, 1.0), (0.0, 0.72)], S2, chrome=False)
-    plate(p, H, "front", [(0.04, 0.3), (0.5, 0.46), (0.96, 0.3), (0.98, 0.7), (0.5, 0.98), (0.02, 0.7)], S)  # bevor
+    gp(p, H, "front", [(0.0, 0.0), (1.0, 0.0), (1.0, 0.72), (0.5, 1.0), (0.0, 0.72)], S2, chrome=False)
+    gp(p, H, "front", [(0.04, 0.3), (0.5, 0.46), (0.96, 0.3), (0.98, 0.7), (0.5, 0.98), (0.02, 0.7)], S)  # bevor
     p.poly(H, "front", [(0.06, 0.28), (0.5, 0.45), (0.94, 0.28), (0.94, 0.37), (0.5, 0.56), (0.06, 0.37)], (10, 10, 16))
     glow_line(p, H, "front", [(0.1, 0.33), (0.5, 0.5), (0.9, 0.33)], glow, core, width=7, halo=14)
-    plate(p, H, "front", [(0.0, 0.0), (1.0, 0.0), (1.0, 0.2), (0.5, 0.38), (0.0, 0.2)], S)  # brow, V-shaped
-    plate(p, H, "front", [(0.46, 0.56), (0.54, 0.56), (0.52, 0.96), (0.48, 0.96)], scale(S, 1.15), chrome=False,
+    gp(p, H, "front", [(0.0, 0.0), (1.0, 0.0), (1.0, 0.2), (0.5, 0.38), (0.0, 0.2)], S)  # brow, V-shaped
+    gp(p, H, "front", [(0.46, 0.56), (0.54, 0.56), (0.52, 0.96), (0.48, 0.96)], scale(S, 1.15), chrome=False,
           depth=0.25)  # ridge
     for s in (1, -1):
         for k in range(3):
@@ -172,7 +177,7 @@ def white_knight():
     for f in ("left", "right"):
         front_u = 0.0 if f == "left" else 1.0
         back_u = 1.0 - front_u
-        plate(p, H, f, [(0, 0), (1, 0), (1, 1), (0, 1)], S, depth=0.06)
+        gp(p, H, f, [(0, 0), (1, 0), (1, 1), (0, 1)], S, depth=0.06)
         pu = 0.4 if f == "left" else 0.6
         # Wing: broad feathers fanning from the visor pivot up and back, painted bottom-up.
         def fu(u):  # u measured from the front edge of this face
@@ -186,96 +191,99 @@ def white_knight():
             b = (piv[0], piv[1] + 0.05)
             upper = (fu(0.62), mid[1] - 0.1)
             lower = (fu(0.66), mid[1] + 0.07)
-            plate(p, H, f, [a, upper, tip, lower, b], scale(S, 1.1 - 0.07 * k), depth=0.12, trim=gold, trim_w=4,
+            gp(p, H, f, [a, upper, tip, lower, b], scale(S, 1.1 - 0.07 * k), depth=0.12, trim=gold, trim_w=4,
                   chrome=False)
             p.line(H, f, [(piv[0], piv[1]), (fu(0.64), mid[1] - 0.01), tip], scale(gold, 0.8), width=3)  # quill
         rivet(p, H, f, fu(0.28), 0.5, 12, gold)
         for k in range(3):
-            plate(p, H, f, [(0, 0.78 + 0.07 * k), (1, 0.78 + 0.07 * k), (1, 0.86 + 0.07 * k), (0, 0.86 + 0.07 * k)], S2,
+            gp(p, H, f, [(0, 0.78 + 0.07 * k), (1, 0.78 + 0.07 * k), (1, 0.86 + 0.07 * k), (0, 0.86 + 0.07 * k)], S2,
                   chrome=False, depth=0.3)
-    plate(p, H, "back", [(0, 0), (1, 0), (1, 0.75), (0, 0.75)], S)
+    gp(p, H, "back", [(0, 0), (1, 0), (1, 0.75), (0, 0.75)], S)
     for k in range(3):
-        plate(p, H, "back", [(0, 0.72 + 0.09 * k), (1, 0.72 + 0.09 * k), (1, 0.82 + 0.09 * k), (0, 0.82 + 0.09 * k)], S2,
+        gp(p, H, "back", [(0, 0.72 + 0.09 * k), (1, 0.72 + 0.09 * k), (1, 0.82 + 0.09 * k), (0, 0.82 + 0.09 * k)], S2,
               chrome=False, depth=0.3)
-    plate(p, H, "top", [(0, 0), (1, 0), (1, 1), (0, 1)], S, depth=0.05)
-    plate(p, H, "top", [(0.38, 0.0), (0.62, 0.0), (0.58, 1.0), (0.42, 1.0)], scale(S, 1.1), trim=gold, trim_w=4,
+    gp(p, H, "top", [(0, 0), (1, 0), (1, 1), (0, 1)], S, depth=0.05)
+    gp(p, H, "top", [(0.38, 0.0), (0.62, 0.0), (0.58, 1.0), (0.42, 1.0)], scale(S, 1.1), trim=gold, trim_w=4,
           depth=0.2)  # crest
     for k in range(4):  # crown spikes on the crest
         v = 0.15 + 0.2 * k
-        plate(p, H, "top", [(0.42, v), (0.5, v - 0.12), (0.58, v)], gold, chrome=False, depth=0.3)
+        gp(p, H, "top", [(0.42, v), (0.5, v - 0.12), (0.58, v)], gold, chrome=False, depth=0.3)
 
     # --- Body -----------------------------------------------------------------
     T = "UpperTorso"
-    plate(p, T, "front", [(0.03, 0.08), (0.97, 0.08), (0.97, 0.62), (0.5, 0.72), (0.03, 0.62)], S)  # breastplate
+    gp(p, T, "front", [(0.03, 0.08), (0.97, 0.08), (0.97, 0.62), (0.5, 0.72), (0.03, 0.62)], S)  # breastplate
     p.poly(T, "front", [(0.5, 0.1), (0.97, 0.08), (0.97, 0.62), (0.5, 0.72)], scale(S, 0.86))  # keel: shade side
     p.line(T, "front", [(0.5, 0.1), (0.5, 0.72)], scale(S, 1.3), width=4)
-    plate(p, T, "front", [(0.03, 0.62), (0.5, 0.72), (0.97, 0.62), (0.97, 0.86), (0.5, 0.96), (0.03, 0.86)], S2,
+    gp(p, T, "front", [(0.03, 0.62), (0.5, 0.72), (0.97, 0.62), (0.97, 0.86), (0.5, 0.96), (0.03, 0.86)], S2,
           depth=0.18)  # plackart
-    plate(p, T, "front", [(0.0, 0.86), (0.5, 0.96), (1.0, 0.86), (1.0, 1.0), (0.0, 1.0)], S, chrome=False, depth=0.3)
-    plate(p, T, "front", [(0.2, 0.0), (0.8, 0.0), (0.86, 0.1), (0.5, 0.16), (0.14, 0.1)], S, chrome=False, depth=0.25)
-    gem(p, T, "front", 0.7, 0.3, 15, blue, gold)
-    for k in range(3):  # engraving round the gem
-        a0 = math.radians(200 + 50 * k)
-        p.line(T, "front", [(0.7 + 0.11 * math.cos(a0 + i * 0.25), 0.3 + 0.13 * math.sin(a0 + i * 0.25)) for i in range(5)],
-               scale(gold, 0.85), width=3)
+    gp(p, T, "front", [(0.0, 0.86), (0.5, 0.96), (1.0, 0.86), (1.0, 1.0), (0.0, 1.0)], S, chrome=False, depth=0.3)
+    gp(p, T, "front", [(0.2, 0.0), (0.8, 0.0), (0.86, 0.1), (0.5, 0.16), (0.14, 0.1)], S, chrome=False, depth=0.25)
+    # Royal crest: a gold shield-shaped frame round a blue roundel with a gold cross.
+    gp(p, T, "front", [(0.36, 0.13), (0.64, 0.13), (0.65, 0.36), (0.5, 0.52), (0.35, 0.36)], gold, chrome=False,
+       depth=0.12, trim=(255, 230, 150))
+    gem(p, T, "front", 0.5, 0.3, 19, blue, (240, 214, 130))
+    p.line(T, "front", [(0.5, 0.22), (0.5, 0.38)], (250, 220, 120), width=5)
+    p.line(T, "front", [(0.44, 0.28), (0.56, 0.28)], (250, 220, 120), width=5)
+    for s in (1, -1):  # gold V lines from the shoulders
+        p.line(T, "front", [(0.5 + s * 0.46, 0.1), (0.5 + s * 0.2, 0.5), (0.5, 0.7)], gold, width=5)
     for u in (0.08, 0.92):
         for k in range(4):
             rivet(p, T, "front", u, 0.16 + 0.12 * k, 5, S)
-    plate(p, T, "back", [(0.02, 0.05), (0.98, 0.05), (0.98, 0.7), (0.02, 0.7)], S)
+    gp(p, T, "back", [(0.02, 0.05), (0.98, 0.05), (0.98, 0.7), (0.02, 0.7)], S)
     for k in range(3):
-        plate(p, T, "back", [(0.0, 0.66 + 0.11 * k), (1.0, 0.66 + 0.11 * k), (1.0, 0.8 + 0.11 * k),
+        gp(p, T, "back", [(0.0, 0.66 + 0.11 * k), (1.0, 0.66 + 0.11 * k), (1.0, 0.8 + 0.11 * k),
                              (0.0, 0.8 + 0.11 * k)], S2, chrome=False, depth=0.25)
     for f in ("left", "right"):
-        plate(p, T, f, [(0.05, 0.05), (0.95, 0.05), (0.95, 0.9), (0.05, 0.9)], S2)
-    plate(p, T, "top", [(0.15, 0.1), (0.85, 0.1), (0.85, 0.9), (0.15, 0.9)], S, chrome=False)
+        gp(p, T, f, [(0.05, 0.05), (0.95, 0.05), (0.95, 0.9), (0.05, 0.9)], S2)
+    gp(p, T, "top", [(0.15, 0.1), (0.85, 0.1), (0.85, 0.9), (0.15, 0.9)], S, chrome=False)
 
     LT = "LowerTorso"
     for f in SIDES4:
         for k in (2, 1, 0):  # faulds, lowest first so each overlaps the next
-            plate(p, LT, f, [(0.0, 0.05 + 0.3 * k), (1.0, 0.05 + 0.3 * k), (1.0, 0.4 + 0.3 * k), (0.0, 0.4 + 0.3 * k)],
+            gp(p, LT, f, [(0.0, 0.05 + 0.3 * k), (1.0, 0.05 + 0.3 * k), (1.0, 0.4 + 0.3 * k), (0.0, 0.4 + 0.3 * k)],
                   S if k % 2 == 0 else S2, chrome=False, depth=0.25)
-    plate(p, LT, "front", [(0.4, 0.1), (0.6, 0.1), (0.6, 0.6), (0.4, 0.6)], gold, chrome=False, depth=0.25)
+    gp(p, LT, "front", [(0.4, 0.1), (0.6, 0.1), (0.6, 0.6), (0.4, 0.6)], gold, chrome=False, depth=0.25)
 
     for side in ("Left", "Right"):
         UA, LA, HA, UL, LL, FT = (side + k for k in ("UpperArm", "LowerArm", "Hand", "UpperLeg", "LowerLeg", "Foot"))
         of = outer_face(UA)
         # Pauldron: lames bowing over the outer shoulder, painted bottom-up.
         for i in (3, 2, 1, 0):
-            plate(p, UA, of, lame_arc(0.0, 1.0, 0.04 + 0.17 * i, 0.27 + 0.17 * i, 0.06), S if i % 2 == 0 else S2,
+            gp(p, UA, of, lame_arc(0.0, 1.0, 0.04 + 0.17 * i, 0.27 + 0.17 * i, 0.06), S if i % 2 == 0 else S2,
                   depth=0.14, trim=scale(S, 1.25), trim_w=2)
             for f in ("front", "back"):
                 ou = outer_u(UA, f)
                 iu = 1 - ou
-                plate(p, UA, f, [(iu, 0.0 + 0.15 * i), (ou, 0.08 + 0.17 * i), (ou, 0.3 + 0.17 * i), (iu, 0.2 + 0.15 * i)],
+                gp(p, UA, f, [(iu, 0.0 + 0.15 * i), (ou, 0.08 + 0.17 * i), (ou, 0.3 + 0.17 * i), (iu, 0.2 + 0.15 * i)],
                       S if i % 2 == 0 else S2, depth=0.14)
-        plate(p, UA, "top", [(0.15, 0.15), (0.85, 0.15), (0.95, 0.5), (0.85, 0.85), (0.15, 0.85), (0.05, 0.5)], S)
-        plate(p, UA, inner_face(UA), [(0.0, 0.0), (1.0, 0.0), (1.0, 0.3), (0.0, 0.3)], S2, chrome=False)
+        gp(p, UA, "top", [(0.15, 0.15), (0.85, 0.15), (0.95, 0.5), (0.85, 0.85), (0.15, 0.85), (0.05, 0.5)], S)
+        gp(p, UA, inner_face(UA), [(0.0, 0.0), (1.0, 0.0), (1.0, 0.3), (0.0, 0.3)], S2, chrome=False)
         for f in SIDES4:  # rerebrace under the pauldron
-            plate(p, UA, f, [(0.05, 0.84), (0.95, 0.84), (0.95, 1.0), (0.05, 1.0)], S2, chrome=False, depth=0.3)
+            gp(p, UA, f, [(0.05, 0.84), (0.95, 0.84), (0.95, 1.0), (0.05, 1.0)], S2, chrome=False, depth=0.3)
         # Vambrace with a couter and a big flared cuff.
         for f in SIDES4:
-            plate(p, LA, f, [(0.08, 0.04), (0.92, 0.04), (0.88, 0.6), (0.12, 0.6)], S)
-            plate(p, LA, f, [(0.12, 0.58), (0.88, 0.58), (1.0, 1.0), (0.0, 1.0)], S2, depth=0.16, trim=gold, trim_w=4)
-        plate(p, LA, "back", [(0.22, 0.0), (0.78, 0.0), (0.86, 0.18), (0.5, 0.34), (0.14, 0.18)], S, depth=0.22)
+            gp(p, LA, f, [(0.08, 0.04), (0.92, 0.04), (0.88, 0.6), (0.12, 0.6)], S)
+            gp(p, LA, f, [(0.12, 0.58), (0.88, 0.58), (1.0, 1.0), (0.0, 1.0)], S2, depth=0.16, trim=gold, trim_w=4)
+        gp(p, LA, "back", [(0.22, 0.0), (0.78, 0.0), (0.86, 0.18), (0.5, 0.34), (0.14, 0.18)], S, depth=0.22)
         rivet(p, LA, "back", 0.5, 0.15, 7, S)
         for f in ("front", "back", "bottom", "left", "right"):
             for k in range(3):
-                plate(p, HA, f, [(0.05, 0.1 + 0.3 * k), (0.95, 0.1 + 0.3 * k), (0.95, 0.4 + 0.3 * k), (0.05, 0.4 + 0.3 * k)],
+                gp(p, HA, f, [(0.05, 0.1 + 0.3 * k), (0.95, 0.1 + 0.3 * k), (0.95, 0.4 + 0.3 * k), (0.05, 0.4 + 0.3 * k)],
                       S, chrome=False, depth=0.3)
         # Legs: tassets, cuisse, knee lames; a pointed knee cop; greave; sabaton.
         for f in SIDES4:
-            plate(p, UL, f, [(0.06, 0.32), (0.94, 0.32), (0.94, 0.82), (0.06, 0.82)], S)
+            gp(p, UL, f, [(0.06, 0.32), (0.94, 0.32), (0.94, 0.82), (0.06, 0.82)], S)
             for k in (1, 0):
-                plate(p, UL, f, lame_arc(0.0, 1.0, 0.0 + 0.15 * k, 0.2 + 0.15 * k, 0.04), S if k == 0 else S2, depth=0.2)
+                gp(p, UL, f, lame_arc(0.0, 1.0, 0.0 + 0.15 * k, 0.2 + 0.15 * k, 0.04), S if k == 0 else S2, depth=0.2)
             for k in (1, 0):
-                plate(p, UL, f, [(0.04, 0.8 + 0.09 * k), (0.96, 0.8 + 0.09 * k), (0.96, 0.9 + 0.09 * k),
+                gp(p, UL, f, [(0.04, 0.8 + 0.09 * k), (0.96, 0.8 + 0.09 * k), (0.96, 0.9 + 0.09 * k),
                                  (0.04, 0.9 + 0.09 * k)], S2, chrome=False, depth=0.3)
-            plate(p, LL, f, [(0.08, 0.2), (0.92, 0.2), (0.88, 0.92), (0.12, 0.92)], S)
-            plate(p, LL, f, [(0.0, 0.88), (1.0, 0.88), (1.0, 1.0), (0.0, 1.0)], S2, chrome=False, depth=0.3)
+            gp(p, LL, f, [(0.08, 0.2), (0.92, 0.2), (0.88, 0.92), (0.12, 0.92)], S)
+            gp(p, LL, f, [(0.0, 0.88), (1.0, 0.88), (1.0, 1.0), (0.0, 1.0)], S2, chrome=False, depth=0.3)
         p.poly(LL, "front", [(0.5, 0.2), (0.88, 0.2), (0.86, 0.92), (0.5, 0.92)], scale(S, 0.84))  # greave keel
         p.line(LL, "front", [(0.5, 0.22), (0.5, 0.92)], scale(S, 1.3), width=4)
-        plate(p, LL, "front", [(0.12, 0.0), (0.88, 0.0), (0.78, 0.2), (0.5, 0.32), (0.22, 0.2)], S, depth=0.2)  # knee
-        plate(p, LL, of, [(0.15, 0.02), (0.85, 0.02), (0.7, 0.28), (0.3, 0.28)], S2, depth=0.2)  # knee wing
+        gp(p, LL, "front", [(0.12, 0.0), (0.88, 0.0), (0.78, 0.2), (0.5, 0.32), (0.22, 0.2)], S, depth=0.2)  # knee
+        gp(p, LL, of, [(0.15, 0.02), (0.85, 0.02), (0.7, 0.28), (0.3, 0.28)], S2, depth=0.2)  # knee wing
         rivet(p, LL, "front", 0.5, 0.14, 7, gold)
         # White cloth panels hanging down the outside of the legs, edged in gold.
         cloth(p, UL, of, [(0.12, 0.0), (0.88, 0.0), (0.95, 1.0), (0.05, 1.0)], (232, 228, 214), folds=3, seed=1,
@@ -284,7 +292,7 @@ def white_knight():
               border=gold, border_w=7)
         for f in ("top", "front", "left", "right", "back"):
             for k in (2, 1, 0):
-                plate(p, FT, f, [(0.0, 0.1 + 0.25 * k), (1.0, 0.1 + 0.25 * k), (1.0, 0.4 + 0.25 * k), (0.0, 0.4 + 0.25 * k)],
+                gp(p, FT, f, [(0.0, 0.1 + 0.25 * k), (1.0, 0.1 + 0.25 * k), (1.0, 0.4 + 0.25 * k), (0.0, 0.4 + 0.25 * k)],
                       S if k % 2 == 0 else S2, chrome=False, depth=0.25)
         p.fill(FT, ("bottom",), (40, 38, 40))
     return p
