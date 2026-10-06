@@ -811,8 +811,6 @@ def royal_guard():
     ch = Character("KnightRoyalGuard", weapon="RoyalHalberd")
     ch.painter = armored_painter(63, (132, 140, 134), (120, 26, 40))
     ch.outfit = parade.parade_knight(ch.name, "guard", seed=63)
-    ch.hairs.append(("Head", "Plume", plume(64, pad=0.36, length=1.3),
-                     ((190, 30, 45), (110, 14, 26), (245, 110, 110))))
     ch.head_scale = HELMED_HEAD
     return ch
 
