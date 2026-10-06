@@ -236,6 +236,9 @@ class Character:
         self.outfit = Outfit(name, glow=glow)
         self.hairs = []  # (part, kind, bmesh, (base, tip, highlight))
         self.sculpt = None  # {part: [(face, cu, cv, ru, rv, height)]} real 3D muscle bulges
+        # Fully helmed knights: the hidden head is shrunk so the helm can be slim (a small
+        # head on broad armour reads as big and dangerous).
+        self.head_scale = None
 
 
 def villager():
@@ -751,6 +754,7 @@ def prince_bumps():
 # ---------------------------------------------------------------------------
 # The court: luxury knights in parade armour (One-Horn design language, regal finish).
 GOLD_GLOW = (255, 200, 90)
+HELMED_HEAD = (0.8, 0.82, 0.95)
 CRIMSON = (255, 40, 60)
 CYAN = (60, 230, 255)
 
@@ -786,6 +790,7 @@ def white_knight():
     ch.painter = armored_painter(61, (128, 136, 130), (225, 220, 210), iris=(255, 200, 90))
     ch.outfit = parade.parade_knight(ch.name, "white", glow=GOLD_GLOW, seed=61)
     parade.parade_shield(ch.outfit)
+    ch.head_scale = HELMED_HEAD
     return ch
 
 
@@ -796,6 +801,7 @@ def black_knight():
     ch = Character("KnightBlack", glow=CRIMSON, weapon="AbyssGreatsword")
     ch.painter = armored_painter(62, (120, 126, 124), (34, 30, 36), iris=(255, 60, 70))
     ch.outfit = parade.parade_knight(ch.name, "black", glow=CRIMSON, seed=62)
+    ch.head_scale = HELMED_HEAD
     return ch
 
 
@@ -807,6 +813,7 @@ def royal_guard():
     ch.outfit = parade.parade_knight(ch.name, "guard", seed=63)
     ch.hairs.append(("Head", "Plume", plume(64, pad=0.36, length=1.3),
                      ((190, 30, 45), (110, 14, 26), (245, 110, 110))))
+    ch.head_scale = HELMED_HEAD
     return ch
 
 
@@ -816,6 +823,7 @@ def paladin():
     ch = Character("KnightPaladin", weapon="EyeWarhammer")
     ch.painter = armored_painter(65, (126, 132, 130), (230, 226, 220))
     ch.outfit = parade.parade_knight(ch.name, "paladin", seed=65)
+    ch.head_scale = HELMED_HEAD
     return ch
 
 
@@ -826,6 +834,7 @@ def dragon_knight():
     ch = Character("CyclopsDragonKnight", glow=DRAGON_GLOW, weapon="DragonLance")
     ch.painter = armored_painter(91, (110, 100, 118), (30, 26, 36), iris=(255, 60, 120))
     ch.outfit = parade.parade_knight(ch.name, "dragoon", glow=DRAGON_GLOW, seed=91)
+    ch.head_scale = HELMED_HEAD
     return ch
 
 
@@ -1285,6 +1294,8 @@ def build_character(ch, atlas_mats):
         o.name = o.data.name = f"{part}_Body"
         objs.append(o)
     replace_head(parts["Head"], template, ch.name)
+    if ch.head_scale:
+        parts["Head"].data.transform(Matrix.Diagonal(Vector(ch.head_scale)).to_4x4())
     if ch.sculpt:
         for part, bumps in ch.sculpt.items():
             sculpt_part(parts[part], bumps)
