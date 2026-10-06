@@ -17,7 +17,7 @@ from outfits.common import Outfit
 # Rounded geometry helpers (part-local coordinates; front = -Y, left = +X).
 
 
-def ring(hw, hd, p=2.6, n=20, keel=0.0, dx=0.0, dy=0.0):
+def ring(hw, hd, p=2.6, n=20, keel=0.0, dx=0.0, dy=0.0, kp=6):
     """Superellipse section (p = 2 ellipse ... large p = box). keel pushes the front
     centre forward into a ridge."""
     pts = []
@@ -27,7 +27,7 @@ def ring(hw, hd, p=2.6, n=20, keel=0.0, dx=0.0, dy=0.0):
         x = hw * math.copysign(abs(s) ** (2 / p), s)
         y = -hd * math.copysign(abs(c) ** (2 / p), c)
         if keel:
-            y -= keel * max(0.0, c) ** 6
+            y -= keel * max(0.0, c) ** kp
         pts.append((x + dx, y + dy))
     return pts
 
@@ -38,7 +38,8 @@ def rshell(piece, rings, color, tip=None, base=None, pos=(0, 0, 0), rot=(0, 0, 0
     for r in rings:
         z, hw, hd = r[:3]
         o = r[3] if len(r) > 3 else {}
-        lofted.append((z, ring(hw, hd, o.get("p", p), n, o.get("keel", 0.0), o.get("dx", 0.0), o.get("dy", 0.0))))
+        lofted.append((z, ring(hw, hd, o.get("p", p), n, o.get("keel", 0.0), o.get("dx", 0.0), o.get("dy", 0.0),
+                               o.get("kp", 6))))
     piece.loft(lofted, color, pos=pos, rot=rot, tip=tip, base=base, smooth=True)
 
 

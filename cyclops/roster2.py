@@ -25,6 +25,7 @@ from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 import bmesh  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
+import armorpaint  # noqa: E402
 import build_all  # noqa: E402
 import hair  # noqa: E402
 import kit  # noqa: E402
@@ -239,6 +240,7 @@ class Character:
         # Fully helmed knights: the hidden head is shrunk so the helm can be slim (a small
         # head on broad armour reads as big and dangerous).
         self.head_scale = None
+        self.armor = None  # sculpted-armour style (sculpt.py + armorpaint.py): replaces the body
 
 
 def villager():
@@ -784,12 +786,13 @@ def plume(seed, count=9, pad=0.3, length=1.0):
 
 
 def white_knight():
-    """White Knight (after the silver knight reference)."""
+    """White Knight (after the silver knight reference): sculpted, painted armour, a red
+    cape over the left shoulder, long cloth panels, the holy greatsword and a shield."""
     ch = Character("KnightWhite", glow=GOLD_GLOW, weapon="RadiantGreatsword", shield=True)
-    ch.painter = armored_painter(61, (128, 136, 130), (225, 220, 210), iris=(255, 200, 90))
-    ch.outfit = refknights.white(ch.name, GOLD_GLOW)
+    ch.armor = "white"
+    ch.painter = armorpaint.PAINTERS["white"]()
+    ch.outfit = refknights.white_extras(ch.name, GOLD_GLOW)
     refknights.white_shield(ch.outfit)
-    ch.head_scale = HELMED_HEAD
     return ch
 
 
@@ -1275,11 +1278,70 @@ def glow_material(color):
     return mat
 
 
+def build_armored(ch, parts, template, atlas_mats):
+    """Sculpted armour: each R15 part becomes one sculpted mesh UV'd straight onto the
+    painted template; the outfit only adds cloth (cape, panels), shields and crystals."""
+    import sculpt
+    mat = bpy.data.materials.new(ch.name + "Armor")
+    mat.use_nodes = True
+    t = mat.node_tree.nodes.new("ShaderNodeTexImage")
+    t.image = bpy.data.images.load(template)
+    bsdf = mat.node_tree.nodes["Principled BSDF"]
+    mat.node_tree.links.new(t.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Metallic"].default_value = 0.35
+    bsdf.inputs["Roughness"].default_value = 0.42
+    objs = []
+    for part, o in parts.items():
+        old = o.data
+        o.data = sculpt.to_mesh(sculpt.BUILDERS[ch.armor](part), part, f"{part}_Body")
+        bpy.data.meshes.remove(old)
+        o.data.materials.append(mat)
+        o.name = f"{part}_Body"
+        objs.append(o)
+    centres = {part: o.location.copy() for part, o in parts.items()}
+    objs += build_extras(ch, centres, atlas_mats)
+    outlines = [make_outline(o, OUTLINE_THICKNESS.get(o.name.split("_", 1)[1], 0.025)) for o in objs
+                if not o.name.split("_", 1)[1].endswith("Glow")]
+    return objs + outlines
+
+
+def build_extras(ch, centres, atlas_mats):
+    """Hair/plumes and outfit pieces placed at the part centres."""
+    objs = []
+    for part, kind, bm, (base, tip, hi) in ch.hairs:
+        tex = hair.hair_texture(os.path.join(OUT, f"{ch.name}_{kind}.png"), base, tip, hi)
+        mat = bpy.data.materials.new(f"{ch.name}{kind}")
+        mat.use_nodes = True
+        t = mat.node_tree.nodes.new("ShaderNodeTexImage")
+        t.image = bpy.data.images.load(tex)
+        mat.node_tree.links.new(t.outputs["Color"], mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"])
+        me = bpy.data.meshes.new(f"{part}_{kind}")
+        bm.to_mesh(me)
+        bm.free()
+        for poly in me.polygons:
+            poly.use_smooth = True
+        me.materials.append(mat)
+        o = bpy.data.objects.new(f"{part}_{kind}", me)
+        o.location = centres[part]
+        bpy.context.collection.objects.link(o)
+        objs.append(o)
+    for part, kinds in ch.outfit.pieces.items():
+        for kind, piece in kinds.items():
+            if not len(piece.bm.faces) or (kind.startswith("Shield") and not ch.shield):
+                piece.bm.free()
+                continue
+            mat = glow_material(ch.outfit.glow) if kind.endswith("Glow") else atlas_mats[0]
+            objs.append(piece.to_object(f"{part}_{kind}", mat, centres[part]))
+    return objs
+
+
 def build_character(ch, atlas_mats):
     """Bake the body, build hair and geometry pieces. Returns all objects (origins at
     the real R15 part centres) for export."""
     template = ch.painter.save(os.path.join(OUT, f"{ch.name}_template.png"))
     parts = r15_real.load_reference()
+    if ch.armor:
+        return build_armored(ch, parts, template, atlas_mats)
     for part, o in parts.items():
         r15_real.add_paint_uv(o, part)
     img = r15_real.bake(parts, template, os.path.join(OUT, f"{ch.name}_texture.png"))

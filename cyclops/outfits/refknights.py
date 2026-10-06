@@ -200,22 +200,7 @@ def white(name, glow):
     o = Outfit(name, glow=glow, seed=61)
     P, P2, R = "plate_white", "blade", "blade"
     h, g = o("Head"), o("Head", "Glow")
-    # Close helm: the visor is part of the shell, keeled to a gentle point - flush in profile.
-    rshell(h, [(-0.62, 0.56, 0.6, {"keel": 0.1}), (-0.2, 0.58, 0.63, {"keel": 0.15}), (0.25, 0.58, 0.62, {"keel": 0.13}),
-               (0.62, 0.47, 0.52, {"keel": 0.08}), (0.88, 0.22, 0.3)], P, tip=(0, -0.02, 1.02), p=3.0)
-    trim(h, 0.33, 0.585, 0.625, P2, h=0.05, keel=0.13)  # visor pivot line
-    for s in (1, -1):
-        slit(h, g, s * 0.06, s * 0.46, 0.15, -0.69, w=0.045, spin=s * 18)
-        for k in range(3):  # breaths
-            h.box((0.035, 0.05, 0.16), "black", pos=(s * (0.2 + 0.08 * k), -0.66 + 0.03 * k, -0.3), rot=(0, 0, s * 18))
-        blob(h, (s * 0.6, -0.05, 0.28), (0.07, 0.1, 0.1), P2, sides=8, rings=3)  # visor pivots
-    pipe(h, [(0, -0.8, 0.35), (0, -0.8, -0.55)], P2, w=0.05)
-    for k in range(5):  # crested crown: flame-like fins swept back over the top
-        t = k / 4
-        fin(h, (0, -0.35 + 0.6 * t, 0.98 - 0.1 * t), (0, 0.8, 1), 0.55 - 0.15 * abs(t - 0.4), 0.025, 0.11, P)
-    for s in (1, -1):
-        for k in range(2):
-            fin(h, (s * 0.3, -0.15 + 0.2 * k, 0.88), (s * 0.35, 0.8, 0.7), 0.5 - 0.12 * k, 0.1, 0.025, P, roll=90)
+    helm_white(h, g, P, P2)
     neck_lames(h, P, P2, R)
     # Chest: smooth plate, a raised V plackart line, the blue gem high on the left breast.
     t, tg = o("UpperTorso"), o("UpperTorso", "Glow")
@@ -249,6 +234,22 @@ def white(name, glow):
     return o
 
 
+def white_extras(name, glow):
+    """Only the cloth for the sculpted White Knight: the long panels and the cape."""
+    o = Outfit(name, glow=glow, seed=61)
+    lt = o("LowerTorso")
+    for s in (1, -1):
+        a0, a1 = (30, 115) if s > 0 else (-115, -30)
+        curved_plate(lt, (s * 0.45, 0.0), 0.86, a0, a1, -2.65, -0.12, "cloth_white", thick=0.04, flare=0.3, n=10)
+        curved_plate(lt, (s * 0.45, 0.0), 0.88, a0 - 2, a1 + 2, -2.72, -2.55, "gold_engraved", thick=0.03, flare=0.33,
+                     n=10)
+    lofted_cape(o, dict(cape="cloth_royal", lining="cloth_white", trim="gold", trim2="blade", gem="gem_blue",
+                        cape_rings=[(0.98, 1.2, 0.1, 0.68, (35, 120)), (0.55, 1.95, 0.3, 0.8, (60, 105)),
+                                    (-0.4, 2.25, 0.62, 0.45, (74, 84)), (-2.0, 2.4, 0.74, 0.45, 74),
+                                    (-3.72, 2.6, 0.9, 0.5, 70)]))
+    return o
+
+
 def white_shield(o):
     from outfits.parade import parade_shield
     parade_shield(o, face="plate_white", rim="blade", gem="gem_blue")
@@ -260,18 +261,7 @@ def black(name, glow):
     o = Outfit(name, glow=glow, seed=62)
     P, P2, R = "plate_black", "plate_black", "blade"
     h, g = o("Head"), o("Head", "Glow")
-    # Round-topped helm with a flat, upright visor plate and a white plume.
-    rshell(h, [(-0.64, 0.56, 0.6), (-0.1, 0.58, 0.62), (0.45, 0.57, 0.61), (0.75, 0.5, 0.54), (0.92, 0.3, 0.34)],
-           P, tip=(0, 0.04, 0.98), p=3.4)
-    # Visor: a plate curving round the face, edged in silver, with one slit across it.
-    rimmed(h, (0, -0.02), 0.64, -68, 68, -0.6, 0.34, P, R, flare=0.03, thick=0.06, n=14)
-    curved_plate(h, (0, -0.02), 0.665, -48, 48, 0.1, 0.17, "black", thick=0.03, n=12)
-    curved_plate(g, (0, -0.02), 0.672, -44, 44, 0.115, 0.155, "glow", thick=0.02, n=12)
-    for k in range(4):  # breathing holes on the right cheek
-        for j in range(2):
-            a = math.radians(-25 - 9 * j)
-            h.box((0.04, 0.04, 0.045), "black", pos=(0.67 * math.sin(a), -0.67 * math.cos(a) - 0.02, -0.12 - 0.08 * k))
-    trim(h, 0.45, 0.585, 0.625, R, h=0.04, p=3.4)
+    helm_black(h, g, P, R)
     neck_lames(h, P, P2, R)
     # Slim breastplate, silver-edged plackart in a double V, a baldric across the chest.
     t = o("UpperTorso")
@@ -309,15 +299,7 @@ def artorias(name, glow):
     o = Outfit(name, glow=glow, seed=63)
     P, P2, R = "plate_dark", "iron", "blade"
     h, g = o("Head"), o("Head", "Glow")
-    # Narrow, rounded helm with a low crest; one flush slit; the plume streams from the crest.
-    rshell(h, [(-0.62, 0.54, 0.6, {"keel": 0.08}), (-0.15, 0.56, 0.62, {"keel": 0.12}), (0.3, 0.56, 0.61, {"keel": 0.1}),
-               (0.66, 0.44, 0.5, {"keel": 0.06}), (0.9, 0.2, 0.28)], P, tip=(0, 0.0, 1.02), p=2.8)
-    slit(h, g, -0.4, 0.4, 0.1, -0.7, w=0.045)
-    h.box((0.9, 0.06, 0.09), P2, pos=(0, -0.7, 0.2))  # brow band over the slit
-    for k in range(5):  # vertical breaths
-        h.box((0.035, 0.05, 0.22), "black", pos=(-0.3 + 0.15 * k, -0.7, -0.3))
-    for k in range(4):  # low crest
-        fin(h, (0, -0.4 + 0.3 * k, 0.95 - 0.04 * k * k), (0, 0.3, 1), 0.16, 0.03, 0.16, P2)
+    helm_guard(h, g, P, P2)
     neck_lames(h, P, P2, R)
     # Chest: plate over overlapping abdominal lames.
     t = o("UpperTorso")
@@ -421,21 +403,7 @@ def dragoon(name, glow):
     o = Outfit(name, glow=glow, seed=91)
     P, P2, R = "plate_black", "plate_dark", "blade"
     h, g = o("Head"), o("Head", "Glow")
-    # Helm: domed, its visor curving down to a beak over the face (flush, pointing down,
-    # not out); a mane of curved blades sweeping back from crown and temples.
-    rshell(h, [(-0.62, 0.55, 0.6, {"keel": 0.2}), (-0.25, 0.57, 0.63, {"keel": 0.16}), (0.2, 0.58, 0.63, {"keel": 0.1}),
-               (0.6, 0.48, 0.54, {"keel": 0.06}), (0.88, 0.24, 0.3)], P, tip=(0, 0.05, 1.0), p=2.8)
-    rshell(h, [(-0.9, 0.08, 0.06, {"dy": -0.72}), (-0.6, 0.2, 0.1, {"dy": -0.74})], P, tip=(0, -0.66, -1.05))  # beak
-    for s in (1, -1):
-        slit(h, g, s * 0.08, s * 0.44, 0.1, -0.7, w=0.045, spin=s * -22)
-        pipe(h, [(s * 0.05, -0.8, 0.3), (s * 0.4, -0.66, 0.25), (s * 0.6, -0.4, 0.05)], R, w=0.04)  # silver brow line
-        for k in range(3):
-            sweep(h, (s * 0.5, -0.1 + 0.25 * k, 0.5 - 0.1 * k), (s * 0.3, 1, 0.6 - 0.15 * k),
-                  1.8 - 0.4 * k, 0.4 - 0.07 * k, 55, P, edge=R, flip=s < 0)
-        for k in range(2):
-            sweep(h, (s * (0.15 + 0.15 * k), 0.0 + 0.2 * k, 0.88 - 0.1 * k), (s * 0.25, 0.8, 1),
-                  1.3 - 0.3 * k, 0.3, 60, P, edge=R, flip=s < 0)
-    sweep(h, (0, -0.4, 0.88), (0, 0.4, 1), 1.5, 0.4, -70, P, edge=R, up=(1, 0, 0))
+    helm_dragon(h, g, P, R)
     neck_lames(h, P, P2, R)
     t, tg = o("UpperTorso"), o("UpperTorso", "Glow")
     breastplate(t, P, keel=0.12, waist=0.98)
@@ -472,3 +440,144 @@ def dragoon(name, glow):
     o.crystals("LeftUpperArm", 4, (0.6, 0.1, 0.75), (0.25, 0.4, 0.15), (0.7, 0.2, 1), length=(0.35, 0.8),
                radius=(0.06, 0.12))
     return o
+
+
+# ---------------------------------------------------------------------------
+# Helms v2: the face is shaped by a side profile - ">" (a pointed bevor) or ")" (a rounded
+# one) - and the opening reads as a V or a Y from the front, cut along the face surface.
+class Helm:
+    def __init__(self, h, g, rings, p=3.0, kp=4, tip=(0, 0, 1.0), col="plate_white"):
+        """rings: (z, half_w, half_d, keel) from chin to crown."""
+        self.h, self.g, self.rings, self.p, self.kp = h, g, rings, p, kp
+        rshell(h, [(z, hw, hd, {"keel": k, "kp": kp}) for z, hw, hd, k in rings], col, tip=tip, p=p)
+
+    def _ring_at(self, z):
+        rs = self.rings
+        if z <= rs[0][0]:
+            return rs[0][1:]
+        for (z0, *a), (z1, *b) in zip(rs, rs[1:]):
+            if z0 <= z <= z1:
+                t = (z - z0) / (z1 - z0)
+                return tuple(a[i] + (b[i] - a[i]) * t for i in range(3))
+        return rs[-1][1:]
+
+    def front_y(self, x, z):
+        hw, hd, keel = self._ring_at(z)
+        u = min(0.999, abs(x) / hw)
+        y = -hd * (1 - u ** self.p) ** (1 / self.p)
+        s = u ** (self.p / 2)
+        c = math.sqrt(max(0.0, 1 - s * s))
+        return y - keel * c ** self.kp
+
+    def point(self, x, z, lift=0.0):
+        e = 0.01
+        y = self.front_y(x, z)
+        n = Vector(((self.front_y(x + e, z) - self.front_y(x - e, z)) / (2 * e), -1,
+                    (self.front_y(x, z + e) - self.front_y(x, z - e)) / (2 * e))).normalized()
+        return Vector((x, y, z)) + n * lift, n
+
+    def groove(self, pts, width=0.06, color="black", glow=True, lift=0.0, glow_w=None):
+        """A cut following the face surface through (x, z) points; glowing inside if asked."""
+        from mathutils import Matrix
+        for (x0, z0), (x1, z1) in zip(pts, pts[1:]):
+            a, n = self.point(x0, z0, lift)
+            b, _ = self.point(x1, z1, lift)
+            d = b - a
+            zax = d.normalized()
+            xax = n.cross(zax).normalized()
+            yax = zax.cross(xax)
+            rot = tuple(math.degrees(v) for v in Matrix((xax, yax, zax)).transposed().to_euler())
+            mid = (a + b) / 2
+            self.h.box((width + 0.04, 0.07, d.length + 0.04), color, pos=tuple(mid), rot=rot)
+            if glow:
+                self.g.box((glow_w or width * 0.6, 0.05, d.length), "glow", pos=tuple(mid + n * 0.018), rot=rot)
+
+    def line(self, pts, color, w=0.05, lift=0.02):
+        pipe(self.h, [tuple(self.point(x, z, lift)[0]) for x, z in pts], color, w=w)
+
+
+def helm_white(h, g, P, P2):
+    """Silver knight: a '>' profile (bevor pointed at mid-face), a V-shaped visor opening,
+    a crest crown of swept fins."""
+    hm = Helm(h, g, [(-0.68, 0.5, 0.56, 0.04), (-0.4, 0.55, 0.6, 0.14), (-0.1, 0.58, 0.62, 0.22),
+                     (0.2, 0.58, 0.62, 0.15), (0.5, 0.52, 0.56, 0.05), (0.8, 0.32, 0.38, 0.0)],
+              p=3.0, kp=4, tip=(0, -0.02, 1.0), col=P)
+    for s in (1, -1):
+        hm.groove([(s * 0.46, 0.26), (s * 0.25, 0.15), (s * 0.05, 0.03)], width=0.06)  # the V
+        hm.groove([(s * 0.36, -0.12), (s * 0.18, -0.24)], width=0.03, glow=False)  # breaths along the V
+        hm.groove([(s * 0.38, -0.24), (s * 0.2, -0.36)], width=0.03, glow=False)
+        blob(h, (s * 0.58, -0.05, 0.3), (0.07, 0.1, 0.1), P2, sides=8, rings=3)
+    hm.line([(0, 0.6), (0, 0.06)], P2, w=0.05)
+    hm.line([(0, -0.02), (0, -0.66)], P2, w=0.05)
+    for k in range(5):  # crest crown
+        t = k / 4
+        fin(h, (0, -0.3 + 0.55 * t, 0.96 - 0.1 * t), (0, 0.8, 1), 0.55 - 0.15 * abs(t - 0.4), 0.025, 0.11, P)
+    for s in (1, -1):
+        for k in range(2):
+            fin(h, (s * 0.3, -0.15 + 0.2 * k, 0.86), (s * 0.35, 0.8, 0.7), 0.5 - 0.12 * k, 0.1, 0.025, P, roll=90)
+
+
+def helm_black(h, g, P, R):
+    """Black knight: a ')' rounded profile and a Y opening (Corinthian): glowing eye arms
+    meeting a dark gap down to the chin, edged in silver. A white plume on top."""
+    hm = Helm(h, g, [(-0.68, 0.52, 0.56, 0.05), (-0.4, 0.56, 0.6, 0.12), (-0.1, 0.58, 0.62, 0.16),
+                     (0.25, 0.58, 0.62, 0.12), (0.55, 0.5, 0.55, 0.04), (0.82, 0.3, 0.36, 0.0)],
+              p=3.0, kp=2, tip=(0, 0.0, 0.98), col=P)
+    for s in (1, -1):
+        hm.groove([(s * 0.46, 0.22), (s * 0.24, 0.12), (s * 0.05, 0.0)], width=0.07)
+        hm.line([(s * 0.48, 0.3), (s * 0.24, 0.2), (s * 0.08, 0.1)], R, w=0.04)
+        hm.line([(s * 0.1, -0.05), (s * 0.08, -0.66)], R, w=0.035)
+    hm.groove([(0, 0.0), (0, -0.66)], width=0.09, glow=True, glow_w=0.025)
+
+
+def helm_guard(h, g, P, P2):
+    """Artorias: a narrow ')' profile, a shallow V slit and a low crest (the long plume
+    streams from it)."""
+    hm = Helm(h, g, [(-0.68, 0.5, 0.56, 0.04), (-0.4, 0.54, 0.6, 0.1), (-0.1, 0.56, 0.62, 0.14),
+                     (0.25, 0.56, 0.61, 0.1), (0.55, 0.48, 0.54, 0.03), (0.84, 0.26, 0.32, 0.0)],
+              p=2.8, kp=2, tip=(0, 0.0, 1.0), col=P)
+    for s in (1, -1):
+        hm.groove([(s * 0.44, 0.16), (s * 0.22, 0.09), (s * 0.04, 0.03)], width=0.05)
+        for k in range(3):
+            hm.groove([(s * (0.12 + 0.1 * k), -0.2), (s * (0.12 + 0.1 * k), -0.45)], width=0.025, glow=False)
+    hm.line([(0, 0.7), (0, 0.05)], P2, w=0.06)
+    for k in range(4):
+        fin(h, (0, -0.35 + 0.3 * k, 0.94 - 0.04 * k * k), (0, 0.3, 1), 0.16, 0.03, 0.16, P2)
+
+
+def helm_dragon(h, g, P, R):
+    """Dragoon: a bird's head - a hooked beak curving down from the brow over the face
+    (it hangs down, it doesn't jut out), V-slanted eye slits either side of it, great
+    horns sweeping back from the temples and a mane of blades."""
+    from kit import TILES
+    hm = Helm(h, g, [(-0.68, 0.5, 0.56, 0.02), (-0.35, 0.55, 0.6, 0.04), (0.0, 0.57, 0.61, 0.05),
+                     (0.35, 0.56, 0.6, 0.04), (0.65, 0.46, 0.5, 0.02), (0.88, 0.24, 0.3, 0.0)],
+              p=3.0, kp=4, tip=(0, 0.05, 1.02), col=P)
+    # Beak: diamond sections along a path down the face, hooked at the tip.
+    path = [(0.5, 0.06, 0.34), (0.25, 0.14, 0.32), (0.0, 0.2, 0.27), (-0.25, 0.23, 0.2), (-0.48, 0.2, 0.12),
+            (-0.64, 0.12, 0.05)]
+    secs = []
+    for z, depth, w in path:
+        base = hm.front_y(0, z)
+        secs.append([(0, base - depth, z), (w, base + 0.02, z + 0.03), (0, base + 0.12, z), (-w, base + 0.02, z + 0.03)])
+    verts = [v for sec in secs for v in sec]
+    tip = (0, hm.front_y(0, -0.64) + 0.0, -0.86)
+    verts.append(tip)
+    faces = []
+    for i in range(len(secs) - 1):
+        a, b = 4 * i, 4 * (i + 1)
+        for k in range(4):
+            j = (k + 1) % 4
+            faces.append((a + k, a + j, b + j, b + k))
+    last, t = 4 * (len(secs) - 1), len(verts) - 1
+    faces += [(last + k, last + (k + 1) % 4, t) for k in range(4)]
+    faces.append((3, 2, 1, 0))
+    h._faces(verts, faces, P)
+    pipe(h, [(0, hm.front_y(0, z) - d - 0.01, z) for z, d, _ in path] + [tip], R, w=0.04)  # silver ridge
+    for s in (1, -1):
+        hm.groove([(s * 0.5, 0.2), (s * 0.34, 0.1), (s * 0.2, 0.02)], width=0.06)
+        for k in range(2):  # horns
+            sweep(h, (s * 0.48, 0.0 + 0.25 * k, 0.55 - 0.1 * k), (s * 0.35, 1, 0.7 - 0.2 * k), 1.9 - 0.5 * k,
+                  0.36 - 0.06 * k, 70, P, edge=R, flip=s < 0)
+        sweep(h, (s * 0.2, 0.15, 0.9), (s * 0.2, 0.8, 1), 1.2, 0.28, 60, P, edge=R, flip=s < 0)  # mane
+    sweep(h, (0, -0.3, 0.92), (0, 0.4, 1), 1.3, 0.36, -70, P, edge=R, up=(1, 0, 0))
