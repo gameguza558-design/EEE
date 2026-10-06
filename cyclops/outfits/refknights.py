@@ -250,6 +250,16 @@ def white_extras(name, glow):
     return o
 
 
+def white_cape(name, glow):
+    """The White Knight's only cloth geometry: the red cape over his left shoulder."""
+    o = Outfit(name, glow=glow, seed=61)
+    lofted_cape(o, dict(cape="cloth_royal", lining="cloth_white", trim="gold", trim2="blade", gem="gem_blue",
+                        cape_rings=[(0.92, 1.12, 0.1, 0.62, (35, 120)), (0.5, 1.9, 0.3, 0.75, (60, 105)),
+                                    (-0.4, 2.2, 0.6, 0.42, (74, 84)), (-2.0, 2.35, 0.72, 0.42, 74),
+                                    (-3.72, 2.55, 0.88, 0.48, 70)]))
+    return o
+
+
 def white_shield(o):
     from outfits.parade import parade_shield
     parade_shield(o, face="plate_white", rim="blade", gem="gem_blue")

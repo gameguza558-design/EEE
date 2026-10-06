@@ -26,6 +26,7 @@ import bmesh  # noqa: E402
 from mathutils import Matrix, Vector  # noqa: E402
 
 import armorpaint  # noqa: E402
+import artpaint  # noqa: E402
 import build_all  # noqa: E402
 import hair  # noqa: E402
 import kit  # noqa: E402
@@ -786,12 +787,12 @@ def plume(seed, count=9, pad=0.3, length=1.0):
 
 
 def white_knight():
-    """White Knight (after the silver knight reference): sculpted, painted armour, a red
-    cape over the left shoulder, long cloth panels, the holy greatsword and a shield."""
+    """White Knight (after the silver knight reference): the armour is painted onto the
+    blocky R15 body like artwork (artpaint.py); geometry is only the red cape over the left
+    shoulder, the holy greatsword and the shield."""
     ch = Character("KnightWhite", glow=GOLD_GLOW, weapon="RadiantGreatsword", shield=True)
-    ch.armor = "white"
-    ch.painter = armorpaint.PAINTERS["white"]()
-    ch.outfit = refknights.white_extras(ch.name, GOLD_GLOW)
+    ch.painter = artpaint.PAINTERS["white"]()
+    ch.outfit = refknights.white_cape(ch.name, GOLD_GLOW)
     refknights.white_shield(ch.outfit)
     return ch
 
